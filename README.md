@@ -54,8 +54,11 @@ npx shadcn@latest init
 📖 https://www.prisma.io/docs/guides/nextjs  
 
 ### 3.1 Prisma ORM
+
+- Install prisma cli, prisma client, and mysql2
 - Create an env file with database url
 - Create a scheme file at prisma/schema.prisma
+- Migrate prisma db
 
 #### 3.1.1 Prisma CLI setup  
 ```bash
@@ -85,6 +88,23 @@ npm install mysql2
 - Prisma uses it under the hood to connect to MySQL.
 - You don’t use it directly — but Prisma needs it to talk to your MySQL DB.
 - Without this, Prisma cannot connect to your DB.
+
+### 3.3 Migrate prisma DB
+```bash
+npx prisma migrate dev
+```
+- Looks at your current prisma/schema.prisma file (the source of truth).
+- Compares it with the database schema.
+- Creates a new migration file inside the prisma/migrations/ folder if there are changes.
+- Applies that migration to your local database.
+- Regenerates the Prisma Client (@prisma/client) so your code can use the new schema immediately.
+
+### 3.4 View DB via GUI
+```bash
+npx prisma generate
+npx prisma studio
+```
+Shows DB tables in http://localhost:5555
 
 ---
 
