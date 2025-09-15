@@ -565,6 +565,57 @@ class Scraper {
     return tableData;
   }
 
+  async extractTableAsArray(
+    tableLocator: Locator,
+    options: { hasHeader?: boolean } = {}
+  ): Promise<{ headers: string[]; rows: string[][] }> {
+    if (!this.page) {
+      await this.ensureBrowserInitiation();
+      if (!this.page) throw new Error("Page not initialised.");
+    }
+
+    const { hasHeader = true } = options;
+
+    // Evaluate inside the browser context
+    const tableData = await tableLocator.evaluate(
+      (table, opts) => {
+        const rows = Array.from(table.querySelectorAll("tr"));
+        if (rows.length === 0) {
+          return { headers: [], rows: [] };
+        }
+
+        let headers: string[] = [];
+        let startRowIndex = 0;
+
+        // If table has headers
+        if (opts.hasHeader) {
+          const headerCells = Array.from(rows[0].querySelectorAll("th,td"));
+          headers = headerCells.map(
+            (cell, i) => cell.textContent?.trim() || `column_${i + 1}`
+          );
+          startRowIndex = 1;
+        } else {
+          const firstRowCells = Array.from(rows[0].querySelectorAll("td"));
+          headers = firstRowCells.map((_, i) => `column_${i + 1}`);
+        }
+
+        const data: string[][] = [];
+
+        for (let i = startRowIndex; i < rows.length; i++) {
+          const cells = Array.from(rows[i].querySelectorAll("td"));
+          if (cells.length === 0) continue;
+
+          data.push(cells.map((cell) => cell.innerText));
+        }
+
+        return { headers, rows: data };
+      },
+      { hasHeader }
+    );
+
+    return tableData;
+  }
+
   private async fetchWithRetry(
     method: HttpMethod,
     url: string,
