@@ -70,6 +70,7 @@ export default function AutomationPage() {
   const [error, setError] = useState<string | null>(null);
 
   const erroRef = useRef<HTMLParagraphElement>(null);
+  
   const resultRef = useRef<HTMLDivElement>(null);
 
   const runAutomation = async () => {
@@ -132,6 +133,7 @@ export default function AutomationPage() {
 
   return (
     <div className="container mx-auto py-10 max-w-4xl space-y-6">
+      {/* Saved flows */}
       <Card>
         <CardHeader>
           <CardTitle>Saved Flows</CardTitle>
@@ -166,7 +168,8 @@ export default function AutomationPage() {
           ))}
         </CardContent>
       </Card>
-      
+
+      {/* Create a new flow */}
       <Card>
         <CardHeader>
           <CardTitle>Automation Flow Builder</CardTitle>
@@ -599,13 +602,13 @@ export default function AutomationPage() {
 
       {/* Results */}
       {results.length > 0 && (
-        <Card ref={resultRef}>
+        <Card>
           <CardHeader>
             <CardTitle>Execution Results</CardTitle>
           </CardHeader>
           <CardContent className="space-y-5">
             {/* Save flow in local storage */}
-            <div className="container py-10 space-y-6">
+            <div className="container py-10 space-y-6" ref={resultRef} autoFocus>
               <Card>
                 <CardHeader>
                   <CardTitle>Save Flow</CardTitle>
@@ -648,10 +651,12 @@ export default function AutomationPage() {
                       <CheckCircle2 className="h-5 w-5 text-green-600" />
                     </div>
 
-                    <div className="text-sm text-muted-foreground">
-                      <strong>Value:</strong>{" "}
-                      <code>{JSON.stringify(value)}</code>
-                    </div>
+                    {!!value && (
+                      <div className="text-sm text-muted-foreground">
+                        <strong>Value:</strong>{" "}
+                        <code>{JSON.stringify(value)}</code>
+                      </div>
+                    )}
 
                     {hasResult && (
                       <div className="p-2 bg-muted rounded-md text-sm font-mono space-y-2 overflow-x-auto">

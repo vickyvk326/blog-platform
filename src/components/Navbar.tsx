@@ -4,6 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "./theme-toggle";
+import Image from "next/image";
 
 const routes = [
   { href: "/", label: "Home" },
@@ -18,6 +20,7 @@ export function Navbar() {
   return (
     <header className="border-b bg-background">
       <nav className="container flex items-center justify-between h-14">
+        <Image src={'/globe.svg'} alt="logo" width={30} height={30} />
         <div className="flex items-center space-x-4">
           {routes.map((route) => (
             <Link key={route.href} href={route.href}>
@@ -34,6 +37,7 @@ export function Navbar() {
             </Link>
           ))}
         </div>
+        <ThemeToggle />
       </nav>
     </header>
   );
