@@ -40,12 +40,12 @@ export default function ScraperPage() {
   };
 
   const handleSingleSiteScrape = async () => {
-    if (!url || !locator) return;
+    if (!url) return;
     setLoading(true);
     try {
       const res = await fetch(
         `/api/scrape/table?url=${encodeURIComponent(url)}&locator=
-                ${encodeURIComponent(locator)}&type=${type}`
+                ${encodeURIComponent(locator || "//table")}&type=${type}`
       );
       const data: tableData = await res.json();
 
@@ -135,7 +135,7 @@ export default function ScraperPage() {
 
   return (
     <div className="p-6 space-y-6 max-w-5xl mx-auto">
-      <h1 className="text-2xl font-bold">Web Scraper Playground</h1>
+      <h1 className="text-2xl font-bold">Table scraper</h1>
 
       {/* ---- GET form ---- */}
       <Tabs defaultValue="account" className="w-full">

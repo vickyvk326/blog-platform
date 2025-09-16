@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
 
     const waitForFullLoad = searchParams.get("waitForFullLoad") == "1";
 
-    if (!tableSiteUrl || !tableLocator || !tableLocatorType)
+    if (!tableSiteUrl || !tableLocatorType)
       throw new NotFoundError("Locator or type");
 
     const scraper = new Scraper();
@@ -31,9 +31,9 @@ export async function GET(request: NextRequest) {
       let table: Locator | null = null;
 
       if (tableLocatorType === "XPATH") {
-        table = await scraper.getElementByXPath(tableLocator);
+        table = await scraper.getElementByXPath(tableLocator || "//table");
       } else if (tableLocatorType === "CSS") {
-        table = await scraper.getElementByCss(tableLocator);
+        table = await scraper.getElementByCss(tableLocator || "table");
       } else {
         throw new Error("Not implemented yet");
       }
@@ -86,9 +86,9 @@ export async function POST(request: NextRequest) {
         let table: Locator | null = null;
 
         if (tableLocatorType === "XPATH") {
-          table = await scraper.getElementByXPath(tableLocator);
+          table = await scraper.getElementByXPath(tableLocator || "//table");
         } else if (tableLocatorType === "CSS") {
-          table = await scraper.getElementByCss(tableLocator);
+          table = await scraper.getElementByCss(tableLocator || "table");
         } else {
           throw new Error("Not implemented yet");
         }
