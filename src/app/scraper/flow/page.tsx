@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { CheckCircle2, Loader2, Plus, Trash2 } from "lucide-react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { flow } from "@/app/api/scrape/flow/route";
 import ExtractedTable from "@/components/scraper/ExtractedTable";
@@ -25,6 +25,7 @@ import {
 } from "@/constants/scraper/flow";
 import { bufferToImageUrl } from "@/lib/utils";
 import Image from "next/image";
+import { deleteFlow, getSavedFlows, SavedFlow, saveFlow } from "@/lib/storage";
 
 export default function AutomationPage() {
   const [steps, setSteps] = useState<flow[]>(defaultSteps);
@@ -105,8 +106,67 @@ export default function AutomationPage() {
     }
   };
 
+  const [name, setName] = useState("");
+
+  const [saved, setSaved] = useState<SavedFlow[]>([]);
+
+  useEffect(() => {
+    setSaved(getSavedFlows());
+  }, []);
+
+  const handleSave = () => {
+    if (!name) return alert("Enter a name");
+    saveFlow({ name, steps });
+    setSaved(getSavedFlows());
+    setName("");
+  };
+
+  const handleLoad = (flow: SavedFlow) => {
+    setSteps(flow.steps);
+  };
+
+  const handleDelete = (flowName: string) => {
+    deleteFlow(flowName);
+    setSaved(getSavedFlows());
+  };
+
   return (
     <div className="container mx-auto py-10 max-w-4xl space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Saved Flows</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {saved.length === 0 && (
+            <p className="text-sm text-muted-foreground">No saved flows</p>
+          )}
+          {saved.map((flow) => (
+            <div
+              key={flow.name}
+              className="flex items-center justify-between border rounded p-2"
+            >
+              <span className="font-medium">{flow.name}</span>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleLoad(flow)}
+                >
+                  Load
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => handleDelete(flow.name)}
+                >
+                  Delete
+                </Button>
+              </div>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+      
       <Card>
         <CardHeader>
           <CardTitle>Automation Flow Builder</CardTitle>
@@ -544,6 +604,23 @@ export default function AutomationPage() {
             <CardTitle>Execution Results</CardTitle>
           </CardHeader>
           <CardContent className="space-y-5">
+            {/* Save flow in local storage */}
+            <div className="container py-10 space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Save Flow</CardTitle>
+                </CardHeader>
+                <CardContent className="flex gap-2">
+                  <Input
+                    placeholder="Flow name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                  />
+                  <Button onClick={handleSave}>Save</Button>
+                </CardContent>
+              </Card>
+            </div>
+
             {results.map((res, idx) => {
               const action = Object.keys(res.step)[0];
               const value = res.step[action];

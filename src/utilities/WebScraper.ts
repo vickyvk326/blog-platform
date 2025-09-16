@@ -723,7 +723,8 @@ class Scraper {
     url: string,
     options: Omit<RequestOptions, "data"> = {}
   ): Promise<APIResponse> {
-    return this.fetchWithRetry("GET", url, options);
+    const res = this.fetchWithRetry("GET", url, options);
+    return (await res).json();
   }
 
   async post(url: string, options: RequestOptions = {}): Promise<APIResponse> {
