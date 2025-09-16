@@ -7,6 +7,7 @@ import {
   Page,
 } from "playwright";
 import Logger from "./Logger";
+import { urlRegex } from "@/lib/utils";
 
 export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
@@ -198,7 +199,9 @@ class Scraper {
       await element.click();
       return true;
     } catch (error) {
-      this.logger.info(`There was an error while clicking the element.`);
+      this.logger.error(
+        `There was an error while clicking the element. ${error}`
+      );
       return false;
     }
   }
@@ -324,6 +327,9 @@ class Scraper {
       });
       return locator;
     } catch (error) {
+      this.logger.error(
+        `Error in getElementByCss for selector "${cssSelector}": ${error}`
+      );
       if (throwOnNotFound) {
         throw new Error(
           `Element with CSS selector "${cssSelector}" not found within ${timeout}ms`
@@ -363,6 +369,9 @@ class Scraper {
       });
       return locator;
     } catch (error) {
+      this.logger.error(
+        `Error in getElementByXPath for selector "${xpath}": ${error}`
+      );
       if (throwOnNotFound) {
         throw new Error(
           `Element with XPath "${xpath}" not found within ${timeout}ms`
@@ -391,6 +400,9 @@ class Scraper {
       });
       return locator.all();
     } catch (error) {
+      this.logger.error(
+        `Error in getElementsByCss for selector "${cssSelector}": ${error}`
+      );
       return []; // Return empty array if no elements found
     }
   }
@@ -415,6 +427,9 @@ class Scraper {
       });
       return locator.all();
     } catch (error) {
+      this.logger.error(
+        `Error in getElementsByXPath for selector "${xpath}": ${error}`
+      );
       return []; // Return empty array if no elements found
     }
   }
@@ -450,7 +465,7 @@ class Scraper {
     attribute: string
   ): Promise<string | null> {
     if (!element) return null;
-    return (await element.getAttribute(attribute))?.trim() || null;
+    return (await element?.getAttribute(attribute))?.trim() || null;
   }
 
   async executeScript<T = null>(
@@ -616,6 +631,55 @@ class Scraper {
     return tableData;
   }
 
+  async waitForElementToDisappear(
+    selectorType: "XPATH" | "CSS",
+    selector: string,
+    options: { timeout?: number; maxRetries?: number } = {}
+  ): Promise<void> {
+    if (!this.page) {
+      console.log("Page not found. Initialising...");
+      await this.ensureBrowserInitiation();
+      if (!this.page) throw new Error("Page not initialised.");
+    }
+    const { timeout = 10000, maxRetries = 2 } = options;
+
+    let lastError: Error | null = null;
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        const locator =
+          selectorType === "XPATH"
+            ? this.page.locator(`xpath=${selector}`)
+            : this.page.locator(selector);
+        await locator.waitFor({ state: "detached", timeout });
+        return;
+      } catch (error) {
+        lastError = error as Error;
+        if (attempt < maxRetries) {
+          const delay = 1000 * (attempt + 1);
+          this.logger.warn(
+            `Wait for disappearance attempt ${
+              attempt + 1
+            } failed. Retrying in ${delay}ms...`
+          );
+          await new Promise((resolve) => setTimeout(resolve, delay));
+        }
+        throw new Error(
+          `Element did not disappear after ${maxRetries} attempts: ${lastError?.message}`
+        );
+      }
+    }
+  }
+
+  async inputText(element: Locator, text: string): Promise<void> {
+    if (!element) throw new Error("Element is null or undefined");
+    await element.fill(text);
+  }
+
+  async takeScreenshot() {
+    const screenshot = await this.page?.screenshot({ fullPage: true });
+    return screenshot;
+  }
+
   private async fetchWithRetry(
     method: HttpMethod,
     url: string,
@@ -662,12 +726,8 @@ class Scraper {
     return this.fetchWithRetry("GET", url, options);
   }
 
-  async post<T>(
-    url: string,
-    data: T,
-    options: RequestOptions = {}
-  ): Promise<APIResponse> {
-    return this.fetchWithRetry("POST", url, { ...options, data });
+  async post(url: string, options: RequestOptions = {}): Promise<APIResponse> {
+    return this.fetchWithRetry("POST", url, { ...options });
   }
 
   async close(): Promise<void> {
