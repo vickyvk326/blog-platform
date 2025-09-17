@@ -53,20 +53,27 @@ const handleStep = async (
           timeout: timeout * 1000,
         });
         break;
-      case 'getElementByXpath':
-        return await scraper.getElementByXPath(value);
-      case 'getElementsByXpath':
-        return await scraper.getElementsByXPath(value);
-      case 'getElementByCss':
-        const { locator, timeout: cssTimeout = 5 } = value as {
+      case 'findElement':
+        const {
+          by,
+          locator,
+          timeout: findElementTimeout = 10,
+          multiple = false,
+        } = value as {
+          by: 'xpath' | 'css' | 'id';
           locator: string;
           timeout?: number;
+          multiple?: boolean;
         };
-        await scraper.getElementByCss(locator, {
-          timeout: cssTimeout * 1000,
-        });
-      case 'getElementsByCss':
-        return await scraper.getElementsByCss(value);
+        if (!multiple) {
+          if (by === 'xpath') return await scraper.getElementByXPath(locator, { timeout: findElementTimeout * 1000 });
+          else if (by === 'css') return await scraper.getElementByCss(locator, { timeout: findElementTimeout * 1000 });
+          else if (by === 'id') throw new Error('Finding element by ID is not supported yet');
+        } else {
+          if (by === 'xpath') return await scraper.getElementByXPath(locator, { timeout: findElementTimeout * 1000 });
+          else if (by === 'css') return await scraper.getElementByCss(locator, { timeout: findElementTimeout * 1000 });
+          else if (by === 'id') throw new Error('Finding element by ID is not supported yet');
+        }
       case 'clickElement':
         await scraper.clickElement(value);
         break;
@@ -80,7 +87,7 @@ const handleStep = async (
         if (prevValue instanceof Array) {
           return await Promise.all(prevValue.map((el: Locator) => scraper.extractTableAsJson(el)));
         } else if (prevValue) {
-          return await scraper.extractTableAsJson(prevValue as Locator);
+          return [await scraper.extractTableAsJson(prevValue as Locator)];
         }
       case 'extractAttribute':
         if (prevValue instanceof Array) {
@@ -117,10 +124,13 @@ const handleStep = async (
         await scraper.scrollIntoElement(prevValue as Locator);
         break;
       case 'getRequest':
-        const { url: getUrl, options = {} }: { url: string; options?: Omit<RequestOptions, 'data'> } = value;
+        const { url: getUrl, options = {} } = value as { url: string; options?: Omit<RequestOptions, 'data'> };
         return await scraper.get(getUrl, options);
       case 'postRequest':
-        const { url: postUrl, options: postOptions = {} }: { url: string; options?: RequestOptions } = value;
+        const { url: postUrl, options: postOptions = {} }: { url: string; options?: RequestOptions } = value as {
+          url: string;
+          options?: RequestOptions;
+        };
         return await scraper.post(postUrl, postOptions);
       default:
         throw new Error(`Unknown action: ${action}`);
@@ -148,7 +158,7 @@ export async function POST(request: NextRequest) {
 
       const value = step.data;
 
-      console.log(`Processing step ${stepCounter}. ${step.label} with value: ${String(value)}`);
+      console.log(`Processing step ${stepCounter}. ${step.label} with value: ${JSON.stringify(value)}`);
 
       const flow = { action, value };
 

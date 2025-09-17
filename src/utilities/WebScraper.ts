@@ -1,6 +1,5 @@
 import { APIRequestContext, APIResponse, Browser, chromium, Locator, Page } from 'playwright';
 import Logger from './Logger';
-import { urlRegex } from '@/lib/utils';
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
@@ -12,6 +11,7 @@ export type RequestOptions = {
   data?: unknown;
   timeout?: number;
   retries?: number;
+  returnJson?: boolean;
 };
 
 declare global {
@@ -617,12 +617,23 @@ class Scraper {
   }
 
   async get(url: string, options: Omit<RequestOptions, 'data'> = {}): Promise<APIResponse> {
-    const res = this.fetchWithRetry('GET', url, options);
-    return (await res).json();
+    console.log(`Get request received with ${JSON.stringify(options)}`);
+
+    const { returnJson, ...rest } = options;
+    const res = this.fetchWithRetry('GET', url, rest);
+    if (returnJson) {
+      return await (await res).json();
+    }
+    return res;
   }
 
   async post(url: string, options: RequestOptions = {}): Promise<APIResponse> {
-    return this.fetchWithRetry('POST', url, { ...options });
+    const { returnJson, ...rest } = options;
+    const res = this.fetchWithRetry('POST', url, rest);
+    if (returnJson) {
+      return await (await res).json();
+    }
+    return res;
   }
 
   async close(): Promise<void> {

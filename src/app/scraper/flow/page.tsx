@@ -21,15 +21,25 @@ import { CheckCircle2, Loader2, Plus, RotateCcw, Trash2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 import ExtractedTable from '@/components/scraper/ExtractedTable';
-import { ACTIONS, ACTIONS_LABELS, ACTION_RULES, Action, defaultSteps, labelledAction } from '@/constants/scraper/flow';
+import {
+  ACTIONS,
+  ACTIONS_LABELS,
+  ACTION_RULES,
+  Action,
+  NSE_DERIVATIVES_STEPS,
+  defaultSteps,
+  labelledAction,
+} from '@/constants/scraper/flow';
 import { SavedFlow, deleteFlow, getSavedFlows, saveFlow } from '@/lib/storage';
 import { bufferToImageUrl } from '@/lib/utils';
 import Image from 'next/image';
 import { toast } from 'sonner';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Switch } from '@/components/ui/switch';
+import { headers } from 'next/headers';
 
 export default function AutomationPage() {
-  const [steps, setSteps] = useState<labelledAction[]>(defaultSteps);
+  const [steps, setSteps] = useState<labelledAction[]>(NSE_DERIVATIVES_STEPS);
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<{ step: labelledAction; result?: unknown }[]>([]);
 
@@ -96,11 +106,9 @@ export default function AutomationPage() {
     if (steps.length === 0) return;
 
     try {
-      if (steps[0].action !== 'navigateTo') throw new Error('First step must be navigateTo');
-
       setLoading(true);
 
-      toast('Task created', {
+      toast.success('Task created', {
         description: 'Automation started successfully',
         style: {
           background: '#333',
@@ -124,23 +132,15 @@ export default function AutomationPage() {
       setResults(data.results || []);
       setError(null);
       resultRef.current?.scrollIntoView({ behavior: 'smooth' });
-      toast('Task completed', {
+      toast.success('Task completed', {
         description: 'Automation completed successfully',
-        style: {
-          background: '#333',
-          color: '#fff',
-        },
       });
     } catch (err) {
       setError(String(err));
       console.error(err);
       erroRef.current?.scrollIntoView({ behavior: 'smooth' });
-      toast('Task completed', {
+      toast.error('Task completed', {
         description: 'Automation failed with error',
-        style: {
-          background: '#333',
-          color: '#fff',
-        },
       });
     } finally {
       setLoading(false);
@@ -160,10 +160,16 @@ export default function AutomationPage() {
     saveFlow({ name, steps });
     setSaved(getSavedFlows());
     setName('');
+    toast.success('Task completed', {
+      description: 'Flow saved successfully',
+    });
   };
 
   const handleLoad = (flow: SavedFlow) => {
     setSteps(flow.steps);
+    toast.success('Task completed', {
+      description: 'Flow loaded successfully',
+    });
   };
 
   const handleDelete = (flowName: string) => {
@@ -174,7 +180,7 @@ export default function AutomationPage() {
   return (
     <div className='container mx-auto py-10 max-w-4xl space-y-6'>
       {/* Saved flows */}
-      <Card>
+      <Card className='py-2'>
         <CardContent>
           <Accordion type='single' collapsible className='w-full'>
             <AccordionItem value='item-1'>
@@ -234,7 +240,7 @@ export default function AutomationPage() {
               <div key={idx} className='border rounded-lg p-4 space-y-4 bg-muted/30'>
                 {/* Action Selector */}
                 <div className='flex items-center justify-between'>
-                  <div className='flex items-center gap-2'>
+                  <div className='flex flex-col md:flex-row items-center gap-2'>
                     <Label>Step {idx + 1}.</Label>
                     <Select value={step.action} onValueChange={(val) => updateStep(idx, val as Action, '')}>
                       <SelectTrigger className='w-96'>
@@ -249,7 +255,6 @@ export default function AutomationPage() {
                       </SelectContent>
                     </Select>
                   </div>
-
                   {/* Remove the step */}
                   <Button size='icon' variant='destructive' onClick={() => removeStep(idx)}>
                     <Trash2 className='w-4 h-4' />
@@ -345,12 +350,17 @@ export default function AutomationPage() {
                             <Image
                               src={bufferToImageUrl(res.result) || ''}
                               width={700}
-                              height={500}
+                              height={300}
                               alt={`screenshot step ${idx + 1}`}
-                              className='rounded-lg border shadow-md max-w-full h-auto'
+                              className='rounded-lg border shadow-md max-w-full mx-auto'
                             />
-                          ) : action === 'extractTable' ? (
-                            <ExtractedTable data={res.result?.[0] || []} />
+                          ) : action === 'extractTable' &&
+                            Array.isArray(res.result) &&
+                            res.result.length &&
+                            Array.isArray(res.result[0]) ? (
+                            res.result.map((table, tableIndex) => (
+                              <ExtractedTable key={tableIndex} data={table || []} />
+                            ))
                           ) : typeof res.result === 'object' ? (
                             <div className='flex flex-col gap-2'>
                               <strong>Result:</strong> <pre>{JSON.stringify(res.result, null, 2)}</pre>
@@ -400,25 +410,87 @@ function ActionInputHandler({ action, value, placeholder, updateStep, idx }: any
   if (action === 'navigateTo') {
     return (
       <div className='space-y-2'>
-          <Input
-            placeholder={placeholder.url || 'https://example.com'}
-            className='w-full'
-            value={value?.url || ''}
-            onChange={(e) =>
+        <Input
+          placeholder={placeholder.url || 'https://example.com'}
+          className='w-full'
+          value={value?.url || ''}
+          onChange={(e) =>
+            updateStep(idx, 'navigateTo', {
+              ...value,
+              url: e.target.value,
+            })
+          }
+        />
+
+        <div className='flex items-center space-x-2'>
+          <Switch
+            id='airplane-mode'
+            checked={value.waitForFullLoad ?? true}
+            className='data-[state=checked]:bg-primary'
+            aria-label='Wait for complete page load'
+            aria-checked={value.waitForFullLoad}
+            onClick={() =>
               updateStep(idx, 'navigateTo', {
                 ...value,
-                url: e.target.value,
+                waitForFullLoad: !value.waitForFullLoad,
               })
             }
           />
+          <Label htmlFor='airplane-mode'>Wait for complete page load</Label>
+        </div>
 
-        <div className='flex items-center gap-4'>
+        {!value.waitForFullLoad && (
+          <div className='flex items-center gap-4'>
+            <Select
+              value={value?.waitUntil || ''}
+              onValueChange={(waitUntil) =>
+                updateStep(idx, 'navigateTo', {
+                  ...value,
+                  waitUntil,
+                })
+              }
+            >
+              <SelectTrigger className='w-72'>
+                <SelectValue placeholder='Select a loading strategy' />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value='domcontentloaded'>Wait for DOM content load</SelectItem>
+                <SelectItem value='load'>Wait until page load</SelectItem>
+                <SelectItem value='networkidle'>Wait until network idle</SelectItem>
+              </SelectContent>
+            </Select>
+            <span>upto</span>
+            <Input
+              placeholder={String(placeholder.timeout) || '30000'}
+              type='number'
+              value={value?.timeout || ''}
+              onChange={(e) =>
+                updateStep(idx, 'navigateTo', {
+                  ...value,
+                  timeout: Number(e.target.value),
+                })
+              }
+              className='w-32'
+            />
+            <span>seconds</span>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Get elements
+  if (action === 'findElement') {
+    return (
+      <>
+        <div className='flex items-center gap-2'>
+          <span>Using</span>
           <Select
-            value={value?.waitUntil || ''}
-            onValueChange={(waitUntil) =>
-              updateStep(idx, 'navigateTo', {
+            value={value?.by || 'xpath'}
+            onValueChange={(by) =>
+              updateStep(idx, action, {
                 ...value,
-                waitUntil,
+                by,
               })
             }
           >
@@ -426,52 +498,47 @@ function ActionInputHandler({ action, value, placeholder, updateStep, idx }: any
               <SelectValue placeholder='Select a loading strategy' />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value='domcontentloaded'>Wait for DOM content load</SelectItem>
-              <SelectItem value='load'>Wait until page load</SelectItem>
-              <SelectItem value='networkidle'>Wait until network idle</SelectItem>
+              <SelectItem value='xpath'>XPATH</SelectItem>
+              <SelectItem value='css'>CSS</SelectItem>
+              <SelectItem value='id'>ID</SelectItem>
             </SelectContent>
           </Select>
-
-          <span>upto</span>
-
+          <span>=</span>
           <Input
-            placeholder={String(placeholder.timeout) || '30000'}
+            placeholder={placeholder.locator || 'XPath or CSS selector'}
+            value={value.locator || ''}
+            onChange={(e) => updateStep(idx, action, { ...value, locator: e.target.value })}
+            className='w-72'
+          />
+        </div>
+        <div className='flex items-center gap-2'>
+          <div className='flex items-center space-x-2'>
+            <Switch
+              id='multiple-elements'
+              checked={value.multiple ?? true}
+              className='data-[state=checked]:bg-primary'
+              aria-label='Wait for complete page load'
+              aria-checked={value.multiple}
+              onClick={() =>
+                updateStep(idx, action, {
+                  ...value,
+                  multiple: !value.multiple,
+                })
+              }
+            />
+            <Label htmlFor='multiple-elements'>Find all matches</Label>
+          </div>
+          <span>and take upto</span>
+          <Input
+            placeholder={placeholder.timeout || 'Timeout in seconds'}
             type='number'
-            value={value?.timeout || ''}
-            onChange={(e) =>
-              updateStep(idx, 'navigateTo', {
-                ...value,
-                timeout: Number(e.target.value),
-              })
-            }
+            value={value.timeout || 0}
+            onChange={(e) => updateStep(idx, action, { ...value, timeout: parseInt(e.target.value) })}
             className='w-32'
           />
           <span>seconds</span>
         </div>
-      </div>
-    );
-  }
-
-  // Get elements
-  if (['getElementByCss', 'getElementByXpath', 'getElementsByCss', 'getElementsByXpath'].includes(action)) {
-    return (
-      <div className='flex items-center gap-2'>
-        <Input
-          placeholder={placeholder.locator || 'CSS selector'}
-          value={value.locator || ''}
-          onChange={(e) => updateStep(idx, 'getElementByCss', { ...value, locator: e.target.value })}
-          className='w-72'
-        />
-        <span>upto</span>
-        <Input
-          placeholder={placeholder.timeout || 'Timeout in seconds'}
-          type='number'
-          value={value.timeout || 0}
-          onChange={(e) => updateStep(idx, 'getElementByCss', { ...value, timeout: parseInt(e.target.value) })}
-          className='w-32'
-        />
-        <span>seconds</span>
-      </div>
+      </>
     );
   }
 
@@ -487,27 +554,14 @@ function ActionInputHandler({ action, value, placeholder, updateStep, idx }: any
     );
   }
 
-  if (action === 'waitForPageLoad') {
+  if (['waitForPageLoad', 'waitForFullLoad'].includes(action)) {
     return (
       <>
         <Input
           type='number'
           placeholder='Timeout (ms)'
           value={value || ''}
-          onChange={(e) => updateStep(idx, 'waitForPageLoad', Number(e.target.value))}
-        />
-      </>
-    );
-  }
-
-  if (action === 'waitForFullLoad') {
-    return (
-      <>
-        <Input
-          type='number'
-          placeholder='Timeout (ms)'
-          value={value || ''}
-          onChange={(e) => updateStep(idx, 'waitForFullLoad', Number(e.target.value))}
+          onChange={(e) => updateStep(idx, action, Number(e.target.value))}
         />
       </>
     );
@@ -537,25 +591,13 @@ function ActionInputHandler({ action, value, placeholder, updateStep, idx }: any
     );
   }
 
-  if (action === 'waitForXpathToDisappear') {
+  if (['waitForXpathToDisappear', 'waitForCssToDisappear'].includes(action)) {
     return (
       <>
         <Input
-          placeholder='Xpath selector'
+          placeholder={placeholder || 'CSS selector or XPath'}
           value={value || ''}
-          onChange={(e) => updateStep(idx, 'waitForXpathToDisappear', e.target.value)}
-        />
-      </>
-    );
-  }
-
-  if (action === 'waitForCssToDisappear') {
-    return (
-      <>
-        <Input
-          placeholder='CSS selector'
-          value={value || ''}
-          onChange={(e) => updateStep(idx, 'waitForCssToDisappear', e.target.value)}
+          onChange={(e) => updateStep(idx, action, e.target.value)}
         />
       </>
     );
@@ -574,14 +616,30 @@ function ActionInputHandler({ action, value, placeholder, updateStep, idx }: any
             })
           }
         />
+        <div className='flex items-center space-x-2'>
+          <Switch
+            id='get-return-json'
+            checked={value.options.returnJson ?? true}
+            className='data-[state=checked]:bg-primary'
+            aria-label='Wait for complete page load'
+            aria-checked={value.options.returnJson}
+            onClick={() =>
+              updateStep(idx, action, {
+                ...value,
+                options: { ...value.options, returnJson: !value.options.returnJson },
+              })
+            }
+          />
+          <Label htmlFor='get-return-json'>Return JSON</Label>
+        </div>
         <Input
           placeholder='Options JSON'
-          value={JSON.stringify(value?.options || {})}
+          value={JSON.stringify(value?.options.headers || {})}
           onChange={(e) => {
             try {
               updateStep(idx, 'getRequest', {
                 ...value,
-                options: JSON.parse(e.target.value),
+                options: { ...value.options, headers: e.target.value },
               });
             } catch {
               // ignore JSON errors

@@ -1,11 +1,10 @@
-import { time } from 'console';
-
 export const ACTIONS = [
   'navigateTo',
-  'getElementByXpath',
-  'getElementsByXpath',
-  'getElementByCss',
-  'getElementsByCss',
+  'findElement',
+  // 'getElementByXpath',
+  // 'getElementsByXpath',
+  // 'getElementByCss',
+  // 'getElementsByCss',
   'clickElement',
   'extractText',
   'extractTable',
@@ -29,39 +28,16 @@ export type Action = (typeof ACTIONS)[number];
 // rules: which previous actions allow this action
 export const ACTION_RULES: Record<Action, Action[]> = {
   navigateTo: [],
-  getElementByXpath: [],
-  getElementsByXpath: [],
-  getElementByCss: [],
-  getElementsByCss: [],
-  clickElement: ['getElementByCss', 'getElementsByCss'],
-  inputText: ['getElementByXpath', 'getElementByCss'],
-  extractText: [
-    'getElementByXpath',
-    'getElementsByXpath',
-    'getElementByCss',
-    'getElementsByCss',
-    'extractText',
-    'extractAttribute',
-    'extractTable',
-  ],
-  extractTable: [
-    'getElementByXpath',
-    'getElementsByXpath',
-    'getElementByCss',
-    'getElementsByCss',
-    'extractText',
-    'extractAttribute',
-    'extractTable',
-  ],
-  extractAttribute: [
-    'getElementByXpath',
-    'getElementsByXpath',
-    'getElementByCss',
-    'getElementsByCss',
-    'extractText',
-    'extractAttribute',
-    'extractTable',
-  ],
+  findElement: [],
+  // getElementByXpath: [],
+  // getElementsByXpath: [],
+  // getElementByCss: [],
+  // getElementsByCss: [],
+  clickElement: ['findElement'],
+  inputText: ['findElement'],
+  extractText: ['findElement', 'extractText', 'extractAttribute', 'extractTable'],
+  extractTable: ['findElement', 'extractText', 'extractAttribute', 'extractTable'],
+  extractAttribute: ['findElement', 'extractText', 'extractAttribute', 'extractTable'],
   waitForPageLoad: ['navigateTo'],
   waitForFullLoad: ['navigateTo'],
   screenshot: [],
@@ -70,7 +46,7 @@ export const ACTION_RULES: Record<Action, Action[]> = {
   waitForCssToDisappear: [],
   scrollToTop: [],
   scrollToBottom: [],
-  scrollIntoElement: ['getElementByXpath', 'getElementByCss'],
+  scrollIntoElement: ['findElement'],
   getRequest: [],
   postRequest: [],
 };
@@ -87,28 +63,33 @@ export const ACTIONS_LABELS: Record<Action, { label: string; description: string
   navigateTo: {
     label: 'Navigate to site',
     description: 'Go to a specific URL to start scraping data from there.',
-    placeholder: { url: 'https://example.com', waitUntil: 'load' },
+    placeholder: { url: 'https://example.com', waitUntil: 'load', waitForFullLoad: true, timeout: 30 },
   },
-  getElementByXpath: {
-    label: 'Get element by XPath',
-    description: 'Select a single element on the page using an XPath expression.',
-    placeholder: { locator: '//*[@id="main"]', timeout: 30 },
+  findElement: {
+    label: 'Find element',
+    description: 'Find element using XPath, CSS selector, or ID.',
+    placeholder: { by: 'xpath', locator: '//*[@id="main"]', timeout: 30, multiple: false },
   },
-  getElementsByXpath: {
-    label: 'Get elements by XPath',
-    description: 'Select multiple elements on the page using an XPath expression.',
-    placeholder: { locator: '//*[@class="item"]', timeout: 30 },
-  },
-  getElementByCss: {
-    label: 'Get element by CSS selector',
-    description: 'Select a single element on the page using a CSS selector.',
-    placeholder: { locator: 'table', timeout: 30 },
-  },
-  getElementsByCss: {
-    label: 'Get elements by CSS selector',
-    description: 'Select multiple elements on the page using a CSS selector.',
-    placeholder: { locator: 'table', timeout: 30 },
-  },
+  // getElementByXpath: {
+  //   label: 'Get element by XPath',
+  //   description: 'Select a single element on the page using an XPath expression.',
+  //   placeholder: { locator: '//*[@id="main"]', timeout: 30 },
+  // },
+  // getElementsByXpath: {
+  //   label: 'Get elements by XPath',
+  //   description: 'Select multiple elements on the page using an XPath expression.',
+  //   placeholder: { locator: '//*[@class="item"]', timeout: 30 },
+  // },
+  // getElementByCss: {
+  //   label: 'Get element by CSS selector',
+  //   description: 'Select a single element on the page using a CSS selector.',
+  //   placeholder: { locator: 'table', timeout: 30 },
+  // },
+  // getElementsByCss: {
+  //   label: 'Get elements by CSS selector',
+  //   description: 'Select multiple elements on the page using a CSS selector.',
+  //   placeholder: { locator: 'table', timeout: 30 },
+  // },
   clickElement: {
     label: 'Click an element',
     description: 'Simulate a click action on a selected element.',
@@ -119,8 +100,8 @@ export const ACTIONS_LABELS: Record<Action, { label: string; description: string
     description: 'Extract text content from a single element or list selected elements.',
   },
   extractTable: {
-    label: 'Extract table data as JSON',
-    description: 'Extract structured data from an HTML table and convert it into JSON format.',
+    label: 'Download table as Excel',
+    description: 'Extract structured data from an HTML table and save it as excel.',
   },
   extractAttribute: {
     label: 'Extract attribute from one or more elements',
@@ -178,7 +159,14 @@ export const ACTIONS_LABELS: Record<Action, { label: string; description: string
   getRequest: {
     label: 'Make a GET request',
     description: 'Fetch data from a specified URL using a GET request.',
-    placeholder: { url: 'https://api.example.com/data' },
+    placeholder: {
+      url: 'https://api.example.com/data',
+      returnJson: true,
+      headers: {},
+      params: {},
+      timeout: 30,
+      retries: 3,
+    },
   },
   postRequest: {
     label: 'Make a POST request',
@@ -190,7 +178,7 @@ export const ACTIONS_LABELS: Record<Action, { label: string; description: string
   },
 };
 
-export const defaultSteps: labelledAction[] = [
+export const NSE_DERIVATIVES_STEPS: labelledAction[] = [
   {
     label: 'Naviagte to site',
     description: 'Go to a specific URL to start scraping data from there.',
@@ -198,23 +186,24 @@ export const defaultSteps: labelledAction[] = [
     data: {
       url: 'https://www.nseindia.com/market-data/equity-derivatives-watch',
       waitUntil: 'load',
+      waitForFullLoad: true,
       timeout: 30,
     },
     placeholder: { url: 'https://example.com', waitUntil: 'load', timeout: 30 },
   },
   {
-    label: 'Wait for an XPath element to disappear',
-    description: 'Pause execution until a specific element, identified by its XPath, is no longer present on the page.',
-    action: 'waitForXpathToDisappear' as Action,
-    data: '//*[@id="eqderivativesTable"]/tbody/tr/td/div/div',
-    placeholder: '//*[@id="loading-indicator"]',
+    label: 'Find element',
+    description: 'Find element using XPath, CSS selector, or ID.',
+    action: 'findElement' as Action,
+    data: { by: 'xpath', locator: "//*[@id='eqderivativesTable']/tbody/tr[2]", timeout: 30, multiple: false },
+    placeholder: { by: 'xpath', locator: '//*[@id="eqderivativesTable"]/tbody/tr[2]', timeout: 30, multiple: false },
   },
   {
-    label: 'Get element by CSS selector',
-    description: 'Select a single element on the page using a CSS selector.',
-    action: 'getElementByCss' as Action,
-    data: { locator: 'table#eqderivativesTable', timeout: 30 },
-    placeholder: 'table',
+    label: 'Find element',
+    description: 'Find element using XPath, CSS selector, or ID.',
+    action: 'findElement' as Action,
+    data: { by: 'css', locator: 'table#eqderivativesTable', timeout: 30, multiple: false },
+    placeholder: { by: 'css', locator: 'table#eqderivativesTable', timeout: 30, multiple: false },
   },
   {
     label: 'Extract table data as excel',
@@ -225,5 +214,48 @@ export const defaultSteps: labelledAction[] = [
     label: 'Take a screenshot',
     description: 'Capture a screenshot of the current page view.',
     action: 'screenshot' as Action,
+  },
+];
+
+export const defaultSteps: labelledAction[] = [
+  {
+    label: 'Naviagte to site',
+    description: 'Go to a specific URL to start scraping data from there.',
+    action: 'navigateTo' as Action,
+    data: { url: 'https://example.com', waitUntil: 'load', waitForFullLoad: true, timeout: 30 },
+    placeholder: { url: 'https://example.com', waitUntil: 'load', waitForFullLoad: true, timeout: 30 },
+  },
+  {
+    label: 'Make a GET request',
+    action: 'getRequest' as Action,
+    description: 'Fetch data from a specified URL using a GET request.',
+    data: {
+      url: 'https://catfact.ninja/fact',
+      options: {
+        returnJson: true,
+        headers: {
+          Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          'Accept-Encoding': 'gzip, deflate, br',
+          'Accept-Language': 'en-US,en;q=0.9',
+          'Cache-Control': 'no-cache',
+          Connection: 'keep-alive',
+          Pragma: 'no-cache',
+          'Sec-Fetch-Dest': 'document',
+          'Sec-Fetch-Mode': 'navigate',
+          'Sec-Fetch-Site': 'none',
+          'Sec-Fetch-User': '?1',
+          'Upgrade-Insecure-Requests': '1',
+          'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        },
+        params: {},
+        timeout: 30,
+        retries: 3,
+      },
+    },
+    placeholder: {
+      url: 'https://catfact.ninja/fact',
+      options: { returnJson: true, headers: {}, params: {}, timeout: 30, retries: 3 },
+    },
   },
 ];
