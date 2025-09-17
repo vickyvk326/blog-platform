@@ -230,7 +230,7 @@ export const defaultSteps: labelledAction[] = [
     action: 'getRequest' as Action,
     description: 'Fetch data from a specified URL using a GET request.',
     data: {
-      url: 'https://catfact.ninja/fact',
+      url: 'https://arbeitnow.com/api/job-board-api',
       options: {
         returnJson: true,
         headers: {
@@ -249,13 +249,13 @@ export const defaultSteps: labelledAction[] = [
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         },
         params: {},
-        timeout: 30,
+        timeout: 30000,
         retries: 3,
       },
     },
     placeholder: {
-      url: 'https://catfact.ninja/fact',
-      options: { returnJson: true, headers: {}, params: {}, timeout: 30, retries: 3 },
+      url: 'https://arbeitnow.com/api/job-board-api',
+      options: { returnJson: true, headers: {}, params: {}, timeout: 30000, retries: 3 },
     },
   },
 ];
