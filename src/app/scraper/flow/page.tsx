@@ -37,6 +37,7 @@ import {
 import { SavedFlow, deleteFlow, getSavedFlows, saveFlow } from "@/lib/storage";
 import { bufferToImageUrl } from "@/lib/utils";
 import Image from "next/image";
+import { toast } from "sonner";
 
 export default function AutomationPage() {
   const [steps, setSteps] = useState<flow[]>(defaultSteps);
@@ -93,6 +94,15 @@ export default function AutomationPage() {
         throw new Error("First step must be navigateTo");
 
       setLoading(true);
+
+      toast("Task created", {
+        description: "Automation started successfully",
+        style: {
+          background: "#333",
+          color: "#fff",
+        },
+      });
+
       const res = await fetch("/api/scrape/flow", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -109,10 +119,24 @@ export default function AutomationPage() {
       setResults(data.results || []);
       setError(null);
       resultRef.current?.scrollIntoView({ behavior: "smooth" });
+      toast("Task completed", {
+        description: "Automation completed successfully",
+        style: {
+          background: "#333",
+          color: "#fff",
+        },
+      });
     } catch (err) {
       setError(String(err));
       console.error(err);
       erroRef.current?.scrollIntoView({ behavior: "smooth" });
+      toast("Task completed", {
+        description: "Automation failed with error",
+        style: {
+          background: "#333",
+          color: "#fff",
+        },
+      });
     } finally {
       setLoading(false);
     }
