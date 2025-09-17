@@ -1,12 +1,5 @@
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { DownloadExcel } from "./DownloadExcelButton";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { DownloadExcel } from './DownloadExcelButton';
 
 type TableResult = {
   [key: string]: string;
@@ -20,17 +13,15 @@ function ExtractedTable({ data }: { data: TableResult[] }) {
 
   return (
     <>
-      <DownloadExcel
-        outputFileName="table.xlsx"
-        headers={headers}
-        rows={data.map((row) => Object.values(row))}
-      />
-      <div className="rounded-lg border shadow-sm overflow-x-auto">
-        <Table className="overflow-x-auto mt-2">
+      <DownloadExcel outputFileName='table.xlsx' headers={headers} rows={data.map((row) => Object.values(row))} />
+      <div className='rounded-lg border shadow-sm overflow-x-auto'>
+        <Table className='overflow-x-auto mt-2'>
           <TableHeader>
             <TableRow>
               {headers.map((h) => (
-                <TableHead key={h} className="font-bold">{h}</TableHead>
+                <TableHead key={h} className='font-bold'>
+                  {h}
+                </TableHead>
               ))}
             </TableRow>
           </TableHeader>
@@ -38,7 +29,7 @@ function ExtractedTable({ data }: { data: TableResult[] }) {
             {data.map((row, i) => (
               <TableRow key={i}>
                 {headers.map((h) => (
-                  <TableCell key={h}>{row[h] || "-"}</TableCell>
+                  <TableCell key={h}>{row[h] || '-'}</TableCell>
                 ))}
               </TableRow>
             ))}

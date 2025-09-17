@@ -1,6 +1,6 @@
-import { NextResponse } from "next/server";
-import { getUsers } from "@/app/service/user.service";
-import { handleApiError, withErrorHandling } from "@/lib/next/errors";
+import { NextResponse } from 'next/server';
+import { getUsers } from '@/app/service/user.service';
+import { handleApiError, withErrorHandling } from '@/lib/next/errors';
 
 export async function GET() {
   try {

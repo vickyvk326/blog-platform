@@ -1,22 +1,10 @@
-import {
-  APIRequestContext,
-  APIResponse,
-  Browser,
-  chromium,
-  Locator,
-  Page,
-} from "playwright";
-import Logger from "./Logger";
-import { urlRegex } from "@/lib/utils";
+import { APIRequestContext, APIResponse, Browser, chromium, Locator, Page } from 'playwright';
+import Logger from './Logger';
+import { urlRegex } from '@/lib/utils';
 
-export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
-export type waitUntil =
-  | "load"
-  | "domcontentloaded"
-  | "networkidle"
-  | "commit"
-  | undefined;
+export type waitUntil = 'load' | 'domcontentloaded' | 'networkidle' | 'commit' | undefined;
 
 export type RequestOptions = {
   headers?: Record<string, string>;
@@ -59,7 +47,7 @@ class Scraper {
     if (!this.browser || this.browser.isConnected()) {
       const browser = global.browser ?? (await chromium.launch({ headless }));
       this.browser = browser;
-      if (process.env.NODE_ENV === "development") global.browser = browser;
+      if (process.env.NODE_ENV === 'development') global.browser = browser;
     }
 
     if (!this.page) {
@@ -79,21 +67,15 @@ class Scraper {
       maxRetries?: number;
       waitUntil?: waitUntil;
       referer?: string;
-    } = {}
+    } = {},
   ): Promise<void> {
     if (!this.page) {
-      console.log("Page not found. Initialising...");
+      console.log('Page not found. Initialising...');
       await this.ensureBrowserInitiation();
-      if (!this.page) throw new Error("Page not initialised.");
+      if (!this.page) throw new Error('Page not initialised.');
     }
 
-    const {
-      waitForFullLoad = false,
-      timeout = 30000,
-      maxRetries = 2,
-      waitUntil = "load",
-      referer,
-    } = options;
+    const { waitForFullLoad = false, timeout = 30000, maxRetries = 2, waitUntil = 'load', referer } = options;
 
     let lastError: Error | null = null;
 
@@ -112,11 +94,7 @@ class Scraper {
 
         if (attempt < maxRetries) {
           const delay = 2000 * (attempt + 1); // Exponential backoff
-          this.logger.warn(
-            `Navigation attempt ${
-              attempt + 1
-            } failed. Retrying in ${delay}ms...\n${error}`
-          );
+          this.logger.warn(`Navigation attempt ${attempt + 1} failed. Retrying in ${delay}ms...\n${error}`);
 
           // Cleanup before retry
           try {
@@ -130,19 +108,17 @@ class Scraper {
       }
     }
 
-    throw new Error(
-      `Failed to navigate to ${url} after ${maxRetries} retries. Last error: ${lastError?.message}`
-    );
+    throw new Error(`Failed to navigate to ${url} after ${maxRetries} retries. Last error: ${lastError?.message}`);
   }
 
   async waitForFullLoad(timeout = 60000): Promise<void> {
-    if (!this.page) throw new Error("Page not initialized");
+    if (!this.page) throw new Error('Page not initialized');
 
     // Combined wait conditions
     await Promise.all([
-      this.page.waitForLoadState("domcontentloaded", { timeout }),
-      this.page.waitForLoadState("networkidle", { timeout }),
-      this.page.waitForFunction(() => document.readyState === "complete", {
+      this.page.waitForLoadState('domcontentloaded', { timeout }),
+      this.page.waitForLoadState('networkidle', { timeout }),
+      this.page.waitForFunction(() => document.readyState === 'complete', {
         timeout,
       }),
     ]).catch(() => {
@@ -150,58 +126,50 @@ class Scraper {
     });
 
     // Final check
-    await this.page.waitForSelector("body", {
-      state: "attached",
+    await this.page.waitForSelector('body', {
+      state: 'attached',
       timeout,
     });
   }
 
-  async waitForElement(
-    selector: string,
-    timeout: number = 15000
-  ): Promise<Locator> {
+  async waitForElement(selector: string, timeout: number = 15000): Promise<Locator> {
     if (!this.page) {
-      console.log("Page not found. Initialising...");
+      console.log('Page not found. Initialising...');
       await this.ensureBrowserInitiation();
-      if (!this.page) throw new Error("Page not initialised.");
+      if (!this.page) throw new Error('Page not initialised.');
     }
     const element = this.page.locator(selector);
-    await element.waitFor({ state: "visible", timeout });
+    await element.waitFor({ state: 'visible', timeout });
     return element;
   }
 
   async waitForXPath(xpath: string, timeout: number = 15000): Promise<Locator> {
     if (!this.page) {
-      console.log("Page not found. Initialising...");
+      console.log('Page not found. Initialising...');
       await this.ensureBrowserInitiation();
-      if (!this.page) throw new Error("Page not initialised.");
+      if (!this.page) throw new Error('Page not initialised.');
     }
     const element = this.page.locator(`xpath=${xpath}`);
-    await element.waitFor({ state: "visible", timeout });
+    await element.waitFor({ state: 'visible', timeout });
     return element;
   }
 
   async waitForNetworkIdle(timeout: number = 15000): Promise<void> {
     if (!this.page) {
-      console.log("Page not found. Initialising...");
+      console.log('Page not found. Initialising...');
       await this.ensureBrowserInitiation();
-      if (!this.page) throw new Error("Page not initialised.");
+      if (!this.page) throw new Error('Page not initialised.');
     }
-    await this.page.waitForLoadState("networkidle", { timeout });
+    await this.page.waitForLoadState('networkidle', { timeout });
   }
 
-  async clickElement(
-    element: Locator,
-    scrollIntoElement: boolean = true
-  ): Promise<boolean> {
+  async clickElement(element: Locator, scrollIntoElement: boolean = true): Promise<boolean> {
     try {
       if (scrollIntoElement) this.scrollIntoElement(element);
       await element.click();
       return true;
     } catch (error) {
-      this.logger.error(
-        `There was an error while clicking the element. ${error}`
-      );
+      this.logger.error(`There was an error while clicking the element. ${error}`);
       return false;
     }
   }
@@ -209,39 +177,37 @@ class Scraper {
   async scrollIntoElement(
     selector: string | Locator,
     options: {
-      selectorType?: "css" | "xpath";
-      behavior?: "auto" | "smooth";
-      block?: "start" | "center" | "end" | "nearest";
-      inline?: "start" | "center" | "end" | "nearest";
+      selectorType?: 'css' | 'xpath';
+      behavior?: 'auto' | 'smooth';
+      block?: 'start' | 'center' | 'end' | 'nearest';
+      inline?: 'start' | 'center' | 'end' | 'nearest';
       timeout?: number;
       maxRetries?: number;
-      waitFor?: "attached" | "visible";
+      waitFor?: 'attached' | 'visible';
       offset?: { x?: number; y?: number };
-    } = {}
+    } = {},
   ): Promise<void> {
     if (!this.page) {
-      console.log("Page not found. Initialising...");
+      console.log('Page not found. Initialising...');
       await this.ensureBrowserInitiation();
-      if (!this.page) throw new Error("Page not initialised.");
+      if (!this.page) throw new Error('Page not initialised.');
     }
 
     const {
-      selectorType = "css",
-      behavior = "smooth",
-      block = "center",
-      inline = "nearest",
+      selectorType = 'css',
+      behavior = 'smooth',
+      block = 'center',
+      inline = 'nearest',
       timeout = 5000,
       maxRetries = 2,
-      waitFor = "visible",
+      waitFor = 'visible',
       offset = { x: 0, y: 0 },
     } = options;
 
     // Handle both string selectors and Locator objects
     const locator =
-      typeof selector === "string"
-        ? this.page
-            .locator(selectorType === "xpath" ? `xpath=${selector}` : selector)
-            .first()
+      typeof selector === 'string'
+        ? this.page.locator(selectorType === 'xpath' ? `xpath=${selector}` : selector).first()
         : selector;
 
     let lastError: Error | null = null;
@@ -274,7 +240,7 @@ class Scraper {
               });
             }
           },
-          { behavior, block, inline, offset }
+          { behavior, block, inline, offset },
         );
 
         // Double-check with Playwright's built-in method
@@ -284,17 +250,13 @@ class Scraper {
         lastError = error as Error;
         if (attempt < maxRetries) {
           const delay = 1000 * (attempt + 1);
-          this.logger.warn(
-            `Scroll attempt ${attempt + 1} failed. Retrying in ${delay}ms...`
-          );
+          this.logger.warn(`Scroll attempt ${attempt + 1} failed. Retrying in ${delay}ms...`);
           await new Promise((resolve) => setTimeout(resolve, delay));
         }
       }
     }
 
-    throw new Error(
-      `Failed to scroll to element after ${maxRetries} attempts: ${lastError?.message}`
-    );
+    throw new Error(`Failed to scroll to element after ${maxRetries} attempts: ${lastError?.message}`);
   }
 
   async getElementByCss(
@@ -302,22 +264,17 @@ class Scraper {
     options: {
       timeout?: number;
       throwOnNotFound?: boolean;
-      waitFor?: "attached" | "visible" | "hidden";
+      waitFor?: 'attached' | 'visible' | 'hidden';
       from?: Locator;
-    } = {}
+    } = {},
   ): Promise<Locator | null> {
     if (!this.page) {
-      console.log("Page not found. Initialising...");
+      console.log('Page not found. Initialising...');
       await this.ensureBrowserInitiation();
-      if (!this.page) throw new Error("Page not initialised.");
+      if (!this.page) throw new Error('Page not initialised.');
     }
 
-    const {
-      timeout = 5000,
-      throwOnNotFound = false,
-      waitFor = "attached",
-      from = this.page,
-    } = options;
+    const { timeout = 5000, throwOnNotFound = false, waitFor = 'attached', from = this.page } = options;
 
     try {
       const locator = from.locator(cssSelector).first();
@@ -327,13 +284,9 @@ class Scraper {
       });
       return locator;
     } catch (error) {
-      this.logger.error(
-        `Error in getElementByCss for selector "${cssSelector}": ${error}`
-      );
+      this.logger.error(`Error in getElementByCss for selector "${cssSelector}": ${error}`);
       if (throwOnNotFound) {
-        throw new Error(
-          `Element with CSS selector "${cssSelector}" not found within ${timeout}ms`
-        );
+        throw new Error(`Element with CSS selector "${cssSelector}" not found within ${timeout}ms`);
       }
       return null;
     }
@@ -344,22 +297,17 @@ class Scraper {
     options: {
       timeout?: number;
       throwOnNotFound?: boolean;
-      waitFor?: "attached" | "visible" | "hidden";
+      waitFor?: 'attached' | 'visible' | 'hidden';
       from?: Locator;
-    } = {}
+    } = {},
   ): Promise<Locator | null> {
     if (!this.page) {
-      console.log("Page not found. Initialising...");
+      console.log('Page not found. Initialising...');
       await this.ensureBrowserInitiation();
-      if (!this.page) throw new Error("Page not initialised.");
+      if (!this.page) throw new Error('Page not initialised.');
     }
 
-    const {
-      timeout = 5000,
-      throwOnNotFound = false,
-      waitFor = "attached",
-      from = this.page,
-    } = options;
+    const { timeout = 5000, throwOnNotFound = false, waitFor = 'attached', from = this.page } = options;
 
     try {
       const locator = from.locator(`xpath=${xpath}`).first();
@@ -369,52 +317,40 @@ class Scraper {
       });
       return locator;
     } catch (error) {
-      this.logger.error(
-        `Error in getElementByXPath for selector "${xpath}": ${error}`
-      );
+      this.logger.error(`Error in getElementByXPath for selector "${xpath}": ${error}`);
       if (throwOnNotFound) {
-        throw new Error(
-          `Element with XPath "${xpath}" not found within ${timeout}ms`
-        );
+        throw new Error(`Element with XPath "${xpath}" not found within ${timeout}ms`);
       }
       return null;
     }
   }
 
-  async getElementsByCss(
-    cssSelector: string,
-    options?: { timeout?: number; from?: Locator }
-  ): Promise<Locator[]> {
+  async getElementsByCss(cssSelector: string, options?: { timeout?: number; from?: Locator }): Promise<Locator[]> {
     if (!this.page) {
-      console.log("Page not found. Initialising...");
+      console.log('Page not found. Initialising...');
       await this.ensureBrowserInitiation();
-      if (!this.page) throw new Error("Page not initialised.");
+      if (!this.page) throw new Error('Page not initialised.');
     }
     const parentLocator = options?.from ?? this.page;
 
     try {
       const locator = parentLocator.locator(cssSelector);
       await locator.first()?.waitFor({
-        state: "attached",
+        state: 'attached',
         timeout: options?.timeout ?? 5000,
       });
       return locator.all();
     } catch (error) {
-      this.logger.error(
-        `Error in getElementsByCss for selector "${cssSelector}": ${error}`
-      );
+      this.logger.error(`Error in getElementsByCss for selector "${cssSelector}": ${error}`);
       return []; // Return empty array if no elements found
     }
   }
 
-  async getElementsByXPath(
-    xpath: string,
-    options?: { timeout?: number; from?: Locator }
-  ): Promise<Locator[]> {
+  async getElementsByXPath(xpath: string, options?: { timeout?: number; from?: Locator }): Promise<Locator[]> {
     if (!this.page) {
-      console.log("Page not found. Initialising...");
+      console.log('Page not found. Initialising...');
       await this.ensureBrowserInitiation();
-      if (!this.page) throw new Error("Page not initialised.");
+      if (!this.page) throw new Error('Page not initialised.');
     }
 
     const parentLocator = options?.from ?? this.page;
@@ -422,31 +358,26 @@ class Scraper {
     try {
       const locator = parentLocator.locator(`xpath=${xpath}`);
       await locator.first()?.waitFor({
-        state: "attached",
+        state: 'attached',
         timeout: options?.timeout ?? 5000,
       });
       return locator.all();
     } catch (error) {
-      this.logger.error(
-        `Error in getElementsByXPath for selector "${xpath}": ${error}`
-      );
+      this.logger.error(`Error in getElementsByXPath for selector "${xpath}": ${error}`);
       return []; // Return empty array if no elements found
     }
   }
 
-  async getElementByJs(
-    jsPath: string,
-    options?: { timeout?: number }
-  ): Promise<Locator | null> {
+  async getElementByJs(jsPath: string, options?: { timeout?: number }): Promise<Locator | null> {
     if (!this.page) {
-      console.log("Page not found. Initialising...");
+      console.log('Page not found. Initialising...');
       await this.ensureBrowserInitiation();
-      if (!this.page) throw new Error("Page not initialised.");
+      if (!this.page) throw new Error('Page not initialised.');
     }
     try {
       const val = await this.executeScript<Locator | null>(jsPath);
 
-      if (!val) throw new Error("Element(s) not found by JS path.");
+      if (!val) throw new Error('Element(s) not found by JS path.');
 
       return val;
     } catch (error) {
@@ -460,10 +391,7 @@ class Scraper {
     return (await element.textContent())?.trim() || null;
   }
 
-  async getElementAttribute(
-    element: Locator,
-    attribute: string
-  ): Promise<string | null> {
+  async getElementAttribute(element: Locator, attribute: string): Promise<string | null> {
     if (!element) return null;
     return (await element?.getAttribute(attribute))?.trim() || null;
   }
@@ -475,39 +403,33 @@ class Scraper {
       timeout?: number;
       returnByValue?: boolean;
       awaitPromise?: boolean;
-    } = {}
+    } = {},
   ): Promise<T> {
     if (!this.page) {
-      console.log("Page not found. Initialising...");
+      console.log('Page not found. Initialising...');
       await this.ensureBrowserInitiation();
-      if (!this.page) throw new Error("Page not initialised.");
+      if (!this.page) throw new Error('Page not initialised.');
     }
 
-    const {
-      timeout = 30000,
-      returnByValue = true,
-      awaitPromise = true,
-    } = options;
+    const { timeout = 30000, returnByValue = true, awaitPromise = true } = options;
 
     try {
       // Handle both string and function input
       const scriptToExecute =
-        typeof script === "function"
-          ? `(${script.toString()})(${JSON.stringify(arg || "")})`
-          : script;
+        typeof script === 'function' ? `(${script.toString()})(${JSON.stringify(arg || '')})` : script;
 
       this.logger.debug(`scriptToExecute ---> ${scriptToExecute}`);
 
       const result = await this.page.evaluateHandle(
         async ({ script, arg }) => {
           try {
-            return await new Function("arg", script)(arg);
+            return await new Function('arg', script)(arg);
           } catch (error) {
-            console.error("Script execution error:", error);
+            console.error('Script execution error:', error);
             throw error;
           }
         },
-        { script: scriptToExecute, arg, timeout }
+        { script: scriptToExecute, arg, timeout },
       );
 
       // Return primitive values directly
@@ -519,21 +441,17 @@ class Scraper {
 
       return result as T;
     } catch (error) {
-      throw new Error(
-        `Script execution failed: ${
-          error instanceof Error ? error.message : String(error)
-        }`
-      );
+      throw new Error(`Script execution failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
   async extractTableAsJson(
     tableLocator: Locator,
-    options: { hasHeader?: boolean } = {}
+    options: { hasHeader?: boolean } = {},
   ): Promise<Record<string, string>[]> {
     if (!this.page) {
       await this.ensureBrowserInitiation();
-      if (!this.page) throw new Error("Page not initialised.");
+      if (!this.page) throw new Error('Page not initialised.');
     }
 
     const { hasHeader = true } = options;
@@ -541,7 +459,7 @@ class Scraper {
     // Evaluate inside the browser context
     const tableData = await tableLocator.evaluate(
       (table, opts) => {
-        const rows = Array.from(table.querySelectorAll("tr"));
+        const rows = Array.from(table.querySelectorAll('tr'));
         if (rows.length === 0) return [];
 
         let headers: string[] = [];
@@ -549,32 +467,30 @@ class Scraper {
 
         // If table has headers
         if (opts.hasHeader) {
-          const headerCells = Array.from(rows[0].querySelectorAll("th,td"));
-          headers = headerCells.map(
-            (cell, i) => cell.textContent?.trim() || `column_${i + 1}`
-          );
+          const headerCells = Array.from(rows[0].querySelectorAll('th,td'));
+          headers = headerCells.map((cell, i) => cell.textContent?.trim() || `column_${i + 1}`);
           startRowIndex = 1;
         } else {
-          const firstRowCells = Array.from(rows[0].querySelectorAll("td"));
+          const firstRowCells = Array.from(rows[0].querySelectorAll('td'));
           headers = firstRowCells.map((_, i) => `column_${i + 1}`);
         }
 
         const data: Record<string, string>[] = [];
 
         for (let i = startRowIndex; i < rows.length; i++) {
-          const cells = Array.from(rows[i].querySelectorAll("td"));
+          const cells = Array.from(rows[i].querySelectorAll('td'));
           if (cells.length === 0) continue;
 
           const row: Record<string, string> = {};
           headers.forEach((header, idx) => {
-            row[header] = cells[idx]?.textContent?.trim() || "";
+            row[header] = cells[idx]?.textContent?.trim() || '';
           });
           data.push(row);
         }
 
         return data;
       },
-      { hasHeader }
+      { hasHeader },
     );
 
     return tableData;
@@ -582,11 +498,11 @@ class Scraper {
 
   async extractTableAsArray(
     tableLocator: Locator,
-    options: { hasHeader?: boolean } = {}
+    options: { hasHeader?: boolean } = {},
   ): Promise<{ headers: string[]; rows: string[][] }> {
     if (!this.page) {
       await this.ensureBrowserInitiation();
-      if (!this.page) throw new Error("Page not initialised.");
+      if (!this.page) throw new Error('Page not initialised.');
     }
 
     const { hasHeader = true } = options;
@@ -594,7 +510,7 @@ class Scraper {
     // Evaluate inside the browser context
     const tableData = await tableLocator.evaluate(
       (table, opts) => {
-        const rows = Array.from(table.querySelectorAll("tr"));
+        const rows = Array.from(table.querySelectorAll('tr'));
         if (rows.length === 0) {
           return { headers: [], rows: [] };
         }
@@ -604,20 +520,18 @@ class Scraper {
 
         // If table has headers
         if (opts.hasHeader) {
-          const headerCells = Array.from(rows[0].querySelectorAll("th,td"));
-          headers = headerCells.map(
-            (cell, i) => cell.textContent?.trim() || `column_${i + 1}`
-          );
+          const headerCells = Array.from(rows[0].querySelectorAll('th,td'));
+          headers = headerCells.map((cell, i) => cell.textContent?.trim() || `column_${i + 1}`);
           startRowIndex = 1;
         } else {
-          const firstRowCells = Array.from(rows[0].querySelectorAll("td"));
+          const firstRowCells = Array.from(rows[0].querySelectorAll('td'));
           headers = firstRowCells.map((_, i) => `column_${i + 1}`);
         }
 
         const data: string[][] = [];
 
         for (let i = startRowIndex; i < rows.length; i++) {
-          const cells = Array.from(rows[i].querySelectorAll("td"));
+          const cells = Array.from(rows[i].querySelectorAll('td'));
           if (cells.length === 0) continue;
 
           data.push(cells.map((cell) => cell.innerText));
@@ -625,53 +539,44 @@ class Scraper {
 
         return { headers, rows: data };
       },
-      { hasHeader }
+      { hasHeader },
     );
 
     return tableData;
   }
 
   async waitForElementToDisappear(
-    selectorType: "XPATH" | "CSS",
+    selectorType: 'XPATH' | 'CSS',
     selector: string,
-    options: { timeout?: number; maxRetries?: number } = {}
+    options: { timeout?: number; maxRetries?: number } = {},
   ): Promise<void> {
     if (!this.page) {
-      console.log("Page not found. Initialising...");
+      console.log('Page not found. Initialising...');
       await this.ensureBrowserInitiation();
-      if (!this.page) throw new Error("Page not initialised.");
+      if (!this.page) throw new Error('Page not initialised.');
     }
     const { timeout = 10000, maxRetries = 2 } = options;
 
     let lastError: Error | null = null;
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
-        const locator =
-          selectorType === "XPATH"
-            ? this.page.locator(`xpath=${selector}`)
-            : this.page.locator(selector);
-        await locator.waitFor({ state: "detached", timeout });
+        const locator = selectorType === 'XPATH' ? this.page.locator(`xpath=${selector}`) : this.page.locator(selector);
+        await locator.waitFor({ state: 'detached', timeout });
         return;
       } catch (error) {
         lastError = error as Error;
         if (attempt < maxRetries) {
           const delay = 1000 * (attempt + 1);
-          this.logger.warn(
-            `Wait for disappearance attempt ${
-              attempt + 1
-            } failed. Retrying in ${delay}ms...`
-          );
+          this.logger.warn(`Wait for disappearance attempt ${attempt + 1} failed. Retrying in ${delay}ms...`);
           await new Promise((resolve) => setTimeout(resolve, delay));
         }
-        throw new Error(
-          `Element did not disappear after ${maxRetries} attempts: ${lastError?.message}`
-        );
+        throw new Error(`Element did not disappear after ${maxRetries} attempts: ${lastError?.message}`);
       }
     }
   }
 
   async inputText(element: Locator, text: string): Promise<void> {
-    if (!element) throw new Error("Element is null or undefined");
+    if (!element) throw new Error('Element is null or undefined');
     await element.fill(text);
   }
 
@@ -680,11 +585,7 @@ class Scraper {
     return screenshot;
   }
 
-  private async fetchWithRetry(
-    method: HttpMethod,
-    url: string,
-    options: RequestOptions
-  ): Promise<APIResponse> {
+  private async fetchWithRetry(method: HttpMethod, url: string, options: RequestOptions): Promise<APIResponse> {
     const maxRetries = options.retries ?? 3; // Default 3 retries
     let lastError: Error | null = null;
 
@@ -705,30 +606,23 @@ class Scraper {
 
         // Exponential backoff (1000ms, 2000ms, 4000ms)
         if (attempt < maxRetries) {
-          this.logger.warn(
-            `Attempt ${attempt + 1} failed: ${lastError.message}. Retrying...`
-          );
+          this.logger.warn(`Attempt ${attempt + 1} failed: ${lastError.message}. Retrying...`);
           const delayMs = 1000 * Math.pow(2, attempt);
           await new Promise((resolve) => setTimeout(resolve, delayMs));
         }
       }
     }
 
-    throw new Error(
-      `Request failed after ${maxRetries} retries: ${lastError?.message}`
-    );
+    throw new Error(`Request failed after ${maxRetries} retries: ${lastError?.message}`);
   }
 
-  async get(
-    url: string,
-    options: Omit<RequestOptions, "data"> = {}
-  ): Promise<APIResponse> {
-    const res = this.fetchWithRetry("GET", url, options);
+  async get(url: string, options: Omit<RequestOptions, 'data'> = {}): Promise<APIResponse> {
+    const res = this.fetchWithRetry('GET', url, options);
     return (await res).json();
   }
 
   async post(url: string, options: RequestOptions = {}): Promise<APIResponse> {
-    return this.fetchWithRetry("POST", url, { ...options });
+    return this.fetchWithRetry('POST', url, { ...options });
   }
 
   async close(): Promise<void> {

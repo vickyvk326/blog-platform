@@ -71,7 +71,7 @@ export class EmailHandler {
    */
   private formatAddress(address: EmailAddress | EmailAddress[]): string {
     if (Array.isArray(address)) {
-      return address.map(a => this.formatSingleAddress(a)).join(',');
+      return address.map((a) => this.formatSingleAddress(a)).join(',');
     }
     return this.formatSingleAddress(address);
   }
@@ -87,7 +87,7 @@ export class EmailHandler {
   async sendBatchEmails(messages: EmailOptions[]): Promise<postmark.Models.MessageSendingResponse[]> {
     return withRetry(
       async () => {
-        const formattedMessages = messages.map(msg => ({
+        const formattedMessages = messages.map((msg) => ({
           From: this.formatAddress(msg.from || this.defaultFrom),
           To: this.formatAddress(msg.to),
           Cc: msg.cc ? this.formatAddress(msg.cc) : undefined,

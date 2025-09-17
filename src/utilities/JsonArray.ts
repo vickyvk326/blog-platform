@@ -26,7 +26,7 @@ class JsonArray<T extends Record<string, any>> {
 
   // Bulk insert with validation
   addMultiple(items: T[]): this {
-    this.data.push(...items.map(item => structuredClone(item)));
+    this.data.push(...items.map((item) => structuredClone(item)));
     return this;
   }
 
@@ -53,7 +53,9 @@ class JsonArray<T extends Record<string, any>> {
         throw new Error(`Failed to verify directory write permissions: ${dir}`);
       }
     } catch (error) {
-      throw new Error(`Directory creation failed for ${filePath}: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `Directory creation failed for ${filePath}: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   }
 
@@ -76,13 +78,13 @@ class JsonArray<T extends Record<string, any>> {
 
       worksheet.columns =
         options.columns ||
-        headers.map(header => ({
+        headers.map((header) => ({
           header,
           key: header,
         }));
 
       // Add rows with data formatting
-      this.data.forEach(row => {
+      this.data.forEach((row) => {
         worksheet.addRow(
           headers.reduce(
             (acc, key) => {
@@ -95,7 +97,7 @@ class JsonArray<T extends Record<string, any>> {
       });
 
       // Auto-fit columns
-      worksheet.columns.forEach(column => {
+      worksheet.columns.forEach((column) => {
         column.width = Math.max(10, Math.min(50, (column.header?.length || 0) + 5));
       });
 
@@ -126,13 +128,13 @@ class JsonArray<T extends Record<string, any>> {
 
       const csvWriter = createObjectCsvWriter({
         path: filePath,
-        header: headers.map(h => ({ id: h, title: h })),
+        header: headers.map((h) => ({ id: h, title: h })),
         append: options.append || false,
         alwaysQuote: true,
       });
 
       await csvWriter.writeRecords(
-        this.data.map(row =>
+        this.data.map((row) =>
           headers.reduce(
             (acc, key) => {
               acc[key] = this.formatCellValue(row[key], options);
@@ -184,10 +186,10 @@ class JsonArray<T extends Record<string, any>> {
       }
 
       content += this.data
-        .map(row =>
+        .map((row) =>
           headers
             .map(
-              header =>
+              (header) =>
                 String(row[header] ?? '')
                   .replace(/\n/g, '\\n') // Escape newlines
                   .replace(new RegExp(delimiter, 'g'), '\\' + delimiter), // Escape delimiters

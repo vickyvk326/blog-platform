@@ -1,5 +1,5 @@
-import { clsx, type ClassValue } from "clsx";
-import { twMerge } from "tailwind-merge";
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -9,7 +9,7 @@ export function cn(...inputs: ClassValue[]) {
 export function bufferToImageUrl(bufferObj: { type: string; data: number[] }) {
   try {
     const uint8Array = new Uint8Array(bufferObj.data);
-    const blob = new Blob([uint8Array], { type: "image/png" }); // screenshots are usually PNG
+    const blob = new Blob([uint8Array], { type: 'image/png' }); // screenshots are usually PNG
     return URL.createObjectURL(blob);
   } catch {
     return null;

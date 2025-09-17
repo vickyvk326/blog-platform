@@ -1,9 +1,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-export const sleep = (ms: number): Promise<void> => new Promise(resolve => setTimeout(resolve, ms));
+export const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
-export const withRetry = async <T>(fn: () => Promise<T>, options: { retries?: number; delay?: number } = {}): Promise<T> => {
+export const withRetry = async <T>(
+  fn: () => Promise<T>,
+  options: { retries?: number; delay?: number } = {},
+): Promise<T> => {
   const { retries = 3, delay = 1000 } = options;
   let lastError: Error | null = null;
 
