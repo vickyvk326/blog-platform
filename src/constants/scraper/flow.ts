@@ -17,6 +17,7 @@ export const ACTIONS = [
   'inputText',
   'waitForXpathToDisappear',
   'waitForCssToDisappear',
+  'scrollToTop',
   'scrollToBottom',
   'scrollIntoElement',
   'getRequest',
@@ -67,6 +68,7 @@ export const ACTION_RULES: Record<Action, Action[]> = {
   executeJavaScript: [],
   waitForXpathToDisappear: [],
   waitForCssToDisappear: [],
+  scrollToTop: [],
   scrollToBottom: [],
   scrollIntoElement: ['getElementByXpath', 'getElementByCss'],
   getRequest: [],
@@ -163,6 +165,10 @@ export const ACTIONS_LABELS: Record<Action, { label: string; description: string
   scrollToBottom: {
     label: 'Scroll to the bottom of the page',
     description: 'Automatically scroll to the bottom of the current page.',
+  },
+  scrollToTop: {
+    label: 'Scroll to the top of the page',
+    description: 'Automatically scroll to the top of the current page.',
   },
   scrollIntoElement: {
     label: 'Scroll into view of an element',

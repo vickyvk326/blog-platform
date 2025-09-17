@@ -104,7 +104,7 @@ const handleStep = async (
       case 'waitForXpathToDisappear':
         await scraper.waitForElementToDisappear('XPATH', value);
         break;
-      case 'waitForCSSToDisappear':
+      case 'waitForCssToDisappear':
         await scraper.waitForElementToDisappear('CSS', value);
         break;
       case 'scrollToTop':
@@ -122,7 +122,7 @@ const handleStep = async (
       case 'postRequest':
         const { url: postUrl, options: postOptions = {} }: { url: string; options?: RequestOptions } = value;
         return await scraper.post(postUrl, postOptions);
-      case 'default':
+      default:
         throw new Error(`Unknown action: ${action}`);
     }
   } catch (error) {
