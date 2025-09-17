@@ -1,3 +1,5 @@
+import { time } from 'console';
+
 export const ACTIONS = [
   'navigateTo',
   'getElementByXpath',
@@ -81,29 +83,29 @@ export interface labelledAction {
 
 export const ACTIONS_LABELS: Record<Action, { label: string; description: string; placeholder?: unknown }> = {
   navigateTo: {
-    label: 'Navigate to a site',
+    label: 'Navigate to site',
     description: 'Go to a specific URL to start scraping data from there.',
     placeholder: { url: 'https://example.com', waitUntil: 'load' },
   },
   getElementByXpath: {
     label: 'Get element by XPath',
     description: 'Select a single element on the page using an XPath expression.',
-    placeholder: '//*[@id="main"]',
+    placeholder: { locator: '//*[@id="main"]', timeout: 30 },
   },
   getElementsByXpath: {
     label: 'Get elements by XPath',
     description: 'Select multiple elements on the page using an XPath expression.',
-    placeholder: '//*[@class="item"]',
+    placeholder: { locator: '//*[@class="item"]', timeout: 30 },
   },
   getElementByCss: {
     label: 'Get element by CSS selector',
     description: 'Select a single element on the page using a CSS selector.',
-    placeholder: 'table',
+    placeholder: { locator: 'table', timeout: 30 },
   },
   getElementsByCss: {
     label: 'Get elements by CSS selector',
     description: 'Select multiple elements on the page using a CSS selector.',
-    placeholder: 'table',
+    placeholder: { locator: 'table', timeout: 30 },
   },
   clickElement: {
     label: 'Click an element',
@@ -184,7 +186,7 @@ export const ACTIONS_LABELS: Record<Action, { label: string; description: string
 
 export const defaultSteps: labelledAction[] = [
   {
-    label: 'Naviagte to a site',
+    label: 'Naviagte to site',
     description: 'Go to a specific URL to start scraping data from there.',
     action: 'navigateTo' as Action,
     data: {
@@ -194,17 +196,23 @@ export const defaultSteps: labelledAction[] = [
     },
     placeholder: { url: 'https://example.com', waitUntil: 'load', timeout: 30 },
   },
-
+  {
+    label: 'Wait for an XPath element to disappear',
+    description: 'Pause execution until a specific element, identified by its XPath, is no longer present on the page.',
+    action: 'waitForXpathToDisappear' as Action,
+    data: '//*[@id="eqderivativesTable"]/tbody/tr/td/div/div',
+    placeholder: '//*[@id="loading-indicator"]',
+  },
   {
     label: 'Get element by CSS selector',
     description: 'Select a single element on the page using a CSS selector.',
     action: 'getElementByCss' as Action,
-    data: 'table#eqderivativesTable',
+    data: { locator: 'table#eqderivativesTable', timeout: 30 },
     placeholder: 'table',
   },
   {
-    label: 'Extract table data as JSON',
-    description: 'Extract structured data from an HTML table and convert it into JSON format.',
+    label: 'Extract table data as excel',
+    description: 'Extract structured data from an HTML table and download it as excel.',
     action: 'extractTable' as Action,
   },
   {

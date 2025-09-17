@@ -17,7 +17,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CheckCircle2, Loader2, Plus, Trash2 } from 'lucide-react';
+import { CheckCircle2, Loader2, Plus, RotateCcw, Trash2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 import ExtractedTable from '@/components/scraper/ExtractedTable';
@@ -26,11 +26,12 @@ import { SavedFlow, deleteFlow, getSavedFlows, saveFlow } from '@/lib/storage';
 import { bufferToImageUrl } from '@/lib/utils';
 import Image from 'next/image';
 import { toast } from 'sonner';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 export default function AutomationPage() {
   const [steps, setSteps] = useState<labelledAction[]>(defaultSteps);
   const [loading, setLoading] = useState(false);
-  const [results, setResults] = useState<unknown[]>([]);
+  const [results, setResults] = useState<{ step: labelledAction; result?: unknown }[]>([]);
 
   const addStep = () =>
     setSteps((prev) => [
@@ -174,34 +175,47 @@ export default function AutomationPage() {
     <div className='container mx-auto py-10 max-w-4xl space-y-6'>
       {/* Saved flows */}
       <Card>
-        <CardHeader>
-          <CardTitle>Saved Flows</CardTitle>
-        </CardHeader>
-        <CardContent className='space-y-2'>
-          {saved.length === 0 && <p className='text-sm text-muted-foreground'>No saved flows</p>}
-          {saved.map((flow) => (
-            <div key={flow.name} className='flex items-center justify-between border rounded p-2'>
-              <span className='font-medium'>{flow.name}</span>
-              <div className='flex gap-2'>
-                <Button variant='outline' size='sm' onClick={() => handleLoad(flow)}>
-                  Load
-                </Button>
-                <ConfirmationModal text='Delete' onConfirm={handleDelete} params={[flow.name]} />
-              </div>
-            </div>
-          ))}
+        <CardContent>
+          <Accordion type='single' collapsible className='w-full'>
+            <AccordionItem value='item-1'>
+              <AccordionTrigger>Saved Flows</AccordionTrigger>
+              <AccordionContent>
+                {saved.length === 0 && <p className='text-sm text-muted-foreground'>No saved flows</p>}
+                {saved.map((flow) => (
+                  <div key={flow.name} className='flex items-center justify-between border rounded p-2 my-2'>
+                    <span className='font-medium'>{flow.name}</span>
+                    <div className='flex gap-2'>
+                      <Button variant='secondary' size='sm' onClick={() => handleLoad(flow)}>
+                        Load
+                      </Button>
+                      <ConfirmationModal text='Delete' onConfirm={handleDelete} params={[flow.name]} />
+                    </div>
+                  </div>
+                ))}
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
         </CardContent>
       </Card>
 
       {/* Create a new flow */}
       <Card>
         <CardHeader>
-          <CardTitle>Automation Flow Builder</CardTitle>
+          <CardTitle className='text-xl'>Create a new automation flow</CardTitle>
         </CardHeader>
         <CardContent className='space-y-6'>
           <div className='flex justify-between mb-2'>
             <Label className='text-lg'>Define Steps</Label>
-            <Button variant={'destructive'} onClick={() => setSteps(defaultSteps)}>
+            <Button
+              variant={'destructive'}
+              onClick={() => {
+                setSteps(defaultSteps);
+                setResults([]);
+                setError(null);
+                setName('');
+              }}
+            >
+              <RotateCcw />
               Reset
             </Button>
           </div>
@@ -221,9 +235,9 @@ export default function AutomationPage() {
                 {/* Action Selector */}
                 <div className='flex items-center justify-between'>
                   <div className='flex items-center gap-2'>
-                    <Label>Step {idx + 1}</Label>
+                    <Label>Step {idx + 1}.</Label>
                     <Select value={step.action} onValueChange={(val) => updateStep(idx, val as Action, '')}>
-                      <SelectTrigger className='w-56 capitalize'>
+                      <SelectTrigger className='w-96'>
                         <SelectValue placeholder='Select action' />
                       </SelectTrigger>
                       <SelectContent>
@@ -244,15 +258,20 @@ export default function AutomationPage() {
 
                 {/* Actions input handler */}
                 <ActionInputHandler
-                  placeholder={step.placeholder}
                   action={step.action}
                   value={step.data}
+                  placeholder={step.placeholder}
+                  description={step.description}
                   idx={idx}
                   updateStep={updateStep}
                 />
+                {/* Description */}
+                <p className='text-sm text-muted-foreground'>{step.description}</p>
               </div>
             );
           })}
+
+          {/* Add more step button */}
           <Button variant='outline' onClick={addStep} className='w-full flex items-center gap-2'>
             <Plus className='w-4 h-4' /> Add Step
           </Button>
@@ -296,10 +315,9 @@ export default function AutomationPage() {
             </CardHeader>
             <CardContent className='space-y-5'>
               {results.map((res, idx) => {
-                const action = Object.keys(res.step)[0];
-                const value = res.step[action];
+                const action = res.step.action;
+                const input = res.step.data;
                 const hasResult = res.result !== undefined;
-
                 return (
                   <div key={idx} className='flex items-start gap-4 border-b pb-4 last:border-b-0'>
                     <div className='flex flex-col items-center'>
@@ -311,19 +329,18 @@ export default function AutomationPage() {
 
                     <div className='flex-1 space-y-2 overflow-auto'>
                       <div className='flex items-center gap-2'>
-                        <span className='font-semibold text-lg'>{action.toUpperCase()}</span>
+                        <span className='font-semibold text-lg'>{res.step.label.toUpperCase()}</span>
                         <CheckCircle2 className='h-5 w-5 text-green-600' />
                       </div>
 
-                      {!!value && (
+                      {!!input && (
                         <div className='text-sm text-muted-foreground'>
-                          <strong>Value:</strong> <code>{JSON.stringify(value)}</code>
+                          <strong>Value:</strong> <code>{JSON.stringify(input)}</code>
                         </div>
                       )}
 
                       {hasResult && (
                         <div className='p-2 bg-muted rounded-md text-sm font-mono space-y-2 overflow-x-auto'>
-                          <strong>Result:</strong>{' '}
                           {action === 'screenshot' && res.result?.type === 'Buffer' ? (
                             <Image
                               src={bufferToImageUrl(res.result) || ''}
@@ -335,7 +352,9 @@ export default function AutomationPage() {
                           ) : action === 'extractTable' ? (
                             <ExtractedTable data={res.result?.[0] || []} />
                           ) : typeof res.result === 'object' ? (
-                            <pre>{JSON.stringify(res.result, null, 2)}</pre>
+                            <div className='flex flex-col gap-2'>
+                              <strong>Result:</strong> <pre>{JSON.stringify(res.result, null, 2)}</pre>
+                            </div>
                           ) : (
                             String(res.result)
                           )}
@@ -376,21 +395,22 @@ function ConfirmationModal({ text = 'delete', onConfirm, params = [] }: any) {
   );
 }
 
-function ActionInputHandler({ placeholder, action, value, updateStep, idx }: any) {
+function ActionInputHandler({ action, value, placeholder, updateStep, idx }: any) {
   // Navigate to
   if (action === 'navigateTo') {
     return (
       <div className='space-y-2'>
-        <Input
-          placeholder={placeholder.url || 'https://example.com'}
-          value={value?.url || ''}
-          onChange={(e) =>
-            updateStep(idx, 'navigateTo', {
-              ...value,
-              url: e.target.value,
-            })
-          }
-        />
+          <Input
+            placeholder={placeholder.url || 'https://example.com'}
+            className='w-full'
+            value={value?.url || ''}
+            onChange={(e) =>
+              updateStep(idx, 'navigateTo', {
+                ...value,
+                url: e.target.value,
+              })
+            }
+          />
 
         <div className='flex items-center gap-4'>
           <Select
@@ -402,7 +422,7 @@ function ActionInputHandler({ placeholder, action, value, updateStep, idx }: any
               })
             }
           >
-            <SelectTrigger className='w-[180px]'>
+            <SelectTrigger className='w-72'>
               <SelectValue placeholder='Select a loading strategy' />
             </SelectTrigger>
             <SelectContent>
@@ -417,6 +437,7 @@ function ActionInputHandler({ placeholder, action, value, updateStep, idx }: any
           <Input
             placeholder={String(placeholder.timeout) || '30000'}
             type='number'
+            value={value?.timeout || ''}
             onChange={(e) =>
               updateStep(idx, 'navigateTo', {
                 ...value,
@@ -424,97 +445,33 @@ function ActionInputHandler({ placeholder, action, value, updateStep, idx }: any
               })
             }
             className='w-32'
-            value={value?.timeout || ''}
           />
           <span>seconds</span>
         </div>
-        {!!value?.waitUntil && (
-          <p className='text-sm text-muted-foreground'>
-            {value?.waitUntil === 'domcontentloaded'
-              ? 'Waits until the html are loaded. Suitable for Server side rendered pages'
-              : value?.waitUntil === 'load'
-                ? 'Waits until loading indicator is off. Suitable for Client side rendered pages'
-                : 'Waits until network requests are off'}
-          </p>
-        )}
       </div>
     );
   }
 
-  {
-    /* Get elements */
-  }
-  if (action === 'getElementByXpath') {
+  // Get elements
+  if (['getElementByCss', 'getElementByXpath', 'getElementsByCss', 'getElementsByXpath'].includes(action)) {
     return (
-      <>
+      <div className='flex items-center gap-2'>
         <Input
-          placeholder='Xpath selector'
-          value={value || ''}
-          onChange={(e) => updateStep(idx, 'getElementByXpath', e.target.value)}
+          placeholder={placeholder.locator || 'CSS selector'}
+          value={value.locator || ''}
+          onChange={(e) => updateStep(idx, 'getElementByCss', { ...value, locator: e.target.value })}
+          className='w-72'
         />
-        <p className='text-sm text-muted-foreground'>
-          xpath of an element e.g. <code>//div[@class="example&quot;]</code>
-        </p>
-      </>
-    );
-  }
-  if (action === 'getElementsByXpath') {
-    return (
-      <>
+        <span>upto</span>
         <Input
-          placeholder='Xpath selector'
-          value={value || ''}
-          onChange={(e) => updateStep(idx, 'getElementsByXpath', e.target.value)}
+          placeholder={placeholder.timeout || 'Timeout in seconds'}
+          type='number'
+          value={value.timeout || 0}
+          onChange={(e) => updateStep(idx, 'getElementByCss', { ...value, timeout: parseInt(e.target.value) })}
+          className='w-32'
         />
-        <p className='text-sm text-muted-foreground'>
-          xpath of group of elements e.g. <code>//div[@class="example&quot;]</code>
-        </p>
-      </>
-    );
-  }
-  if (action === 'getElementByCss') {
-    return (
-      <>
-        <Input
-          placeholder='CSS selector'
-          value={value || ''}
-          onChange={(e) => updateStep(idx, 'getElementByCss', e.target.value)}
-        />
-        <p className='text-sm text-muted-foreground'>
-          CSS selector of an element e.g. <code>.example-class</code>
-        </p>
-      </>
-    );
-  }
-  if (action === 'getElementsByCss') {
-    return (
-      <>
-        <Input
-          placeholder='CSS selector'
-          value={value || ''}
-          onChange={(e) => updateStep(idx, 'getElementsByCss', e.target.value)}
-        />
-        <p className='text-sm text-muted-foreground'>
-          CSS selector of group of elements e.g. <code>.example-class</code>
-        </p>
-      </>
-    );
-  }
-
-  if (action === 'clickElement') {
-    return <p className='text-sm text-muted-foreground'>Clicks above selected element</p>;
-  }
-
-  if (action === 'extractText') {
-    return <p className='text-sm text-muted-foreground'>Extracts text from above selected element(s)</p>;
-  }
-
-  if (action === 'extractTable') {
-    return (
-      <p className='text-sm text-muted-foreground'>
-        Extracts table from above selected element. Make sure that the element is a table. Only works on tables with
-        headers.
-      </p>
+        <span>seconds</span>
+      </div>
     );
   }
 
@@ -526,7 +483,6 @@ function ActionInputHandler({ placeholder, action, value, updateStep, idx }: any
           value={value || ''}
           onChange={(e) => updateStep(idx, 'extractAttribute', e.target.value)}
         />
-        <p className='text-sm text-muted-foreground'>e.g. href, src, title, data-*</p>
       </>
     );
   }
@@ -540,7 +496,6 @@ function ActionInputHandler({ placeholder, action, value, updateStep, idx }: any
           value={value || ''}
           onChange={(e) => updateStep(idx, 'waitForPageLoad', Number(e.target.value))}
         />
-        <p className='text-sm text-muted-foreground'>Waits until page load or timeout (default 5000ms)</p>
       </>
     );
   }
@@ -554,15 +509,8 @@ function ActionInputHandler({ placeholder, action, value, updateStep, idx }: any
           value={value || ''}
           onChange={(e) => updateStep(idx, 'waitForFullLoad', Number(e.target.value))}
         />
-        <p className='text-sm text-muted-foreground'>
-          Waits for given time to allow full page load (e.g. for infinite scroll pages)
-        </p>
       </>
     );
-  }
-
-  if (action === 'screenshot') {
-    return <p className='text-sm text-muted-foreground'>Takes screenshot of current page</p>;
   }
 
   if (action === 'executeJavaScript') {
@@ -573,9 +521,6 @@ function ActionInputHandler({ placeholder, action, value, updateStep, idx }: any
           value={value || ''}
           onChange={(e) => updateStep(idx, 'executeJavaScript', e.target.value)}
         />
-        <p className='text-sm text-muted-foreground'>
-          e.g. document.querySelector(&apos;input&apos;).value = &apos;text&apos;
-        </p>
       </>
     );
   }
@@ -588,9 +533,6 @@ function ActionInputHandler({ placeholder, action, value, updateStep, idx }: any
           value={value || ''}
           onChange={(e) => updateStep(idx, 'inputText', e.target.value)}
         />
-        <p className='text-sm text-muted-foreground'>
-          Inputs text into above selected element (should be input, textarea or [contenteditable])
-        </p>
       </>
     );
   }
@@ -603,9 +545,6 @@ function ActionInputHandler({ placeholder, action, value, updateStep, idx }: any
           value={value || ''}
           onChange={(e) => updateStep(idx, 'waitForXpathToDisappear', e.target.value)}
         />
-        <p className='text-sm text-muted-foreground'>
-          Waits until the xpath element disappears from page. E.g. for loading indicators
-        </p>
       </>
     );
   }
@@ -618,18 +557,8 @@ function ActionInputHandler({ placeholder, action, value, updateStep, idx }: any
           value={value || ''}
           onChange={(e) => updateStep(idx, 'waitForCssToDisappear', e.target.value)}
         />
-        <p className='text-sm text-muted-foreground'>
-          Waits until the CSS element disappears from page. E.g. for loading indicators
-        </p>
       </>
     );
-  }
-
-  if (action === 'scrollToBottom') {
-    return <p className='text-sm text-muted-foreground'>Scrolls page to bottom</p>;
-  }
-  if (action === 'scrollIntoElement') {
-    return <p className='text-sm text-muted-foreground'>Scrolls into previously selected element</p>;
   }
 
   if (action === 'getRequest') {
@@ -659,7 +588,6 @@ function ActionInputHandler({ placeholder, action, value, updateStep, idx }: any
             }
           }}
         />
-        <p className='text-sm text-muted-foreground'>Make GET request to given URL with optional headers, etc.</p>
       </div>
     );
   }
@@ -691,7 +619,6 @@ function ActionInputHandler({ placeholder, action, value, updateStep, idx }: any
             }
           }}
         />
-        <p className='text-sm text-muted-foreground'>Make POST request to given URL with optional headers, etc.</p>
       </div>
     );
   }

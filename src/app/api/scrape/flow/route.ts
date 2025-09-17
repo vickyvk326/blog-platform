@@ -37,7 +37,7 @@ const handleStep = async (
   stepCounter?: number,
 ) => {
   const { action, value } = flow as {
-    action: keyof flow;
+    action: Action;
     value: flow[keyof flow];
   };
   try {
@@ -58,17 +58,11 @@ const handleStep = async (
       case 'getElementsByXpath':
         return await scraper.getElementsByXPath(value);
       case 'getElementByCss':
-        const {
-          url: cssUrl,
-          waitUntil: cssWaitUntil = 'load',
-          timeout: cssTimeout = 5,
-        } = value as {
-          url: string;
-          waitUntil?: waitUntil;
+        const { locator, timeout: cssTimeout = 5 } = value as {
+          locator: string;
           timeout?: number;
         };
-        await scraper.navigate(cssUrl, {
-          waitUntil: cssWaitUntil,
+        await scraper.getElementByCss(locator, {
           timeout: cssTimeout * 1000,
         });
       case 'getElementsByCss':
@@ -154,7 +148,7 @@ export async function POST(request: NextRequest) {
 
       const value = step.data;
 
-      console.log(`Processing step ${stepCounter}. ${action} with value: ${value}`);
+      console.log(`Processing step ${stepCounter}. ${step.label} with value: ${String(value)}`);
 
       const flow = { action, value };
 
