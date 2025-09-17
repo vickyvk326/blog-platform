@@ -131,9 +131,7 @@ const handleStep = async (
         throw new Error(`Unknown action: ${action}`);
     }
   } catch (error) {
-    throw new Error(
-      `Processing step ${stepCounter}. ${action}: ${error}`
-    );
+    throw new Error(`Processing step ${stepCounter}. ${action}: ${error}`);
   }
 };
 
@@ -165,7 +163,7 @@ export async function POST(request: NextRequest) {
 
       const result = await handleStep(scraper, flow, lastResult, stepCounter);
 
-      lastResult = result;
+      if (!!result) lastResult = result;
 
       const shouldStoreResult = [
         "extractText",

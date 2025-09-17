@@ -37,18 +37,27 @@ export const ACTION_RULES: Record<Action, Action[]> = {
     "getElementsByXpath",
     "getElementByCss",
     "getElementsByCss",
+    "extractText",
+    "extractAttribute",
+    "extractTable",
   ],
   extractTable: [
     "getElementByXpath",
     "getElementsByXpath",
     "getElementByCss",
     "getElementsByCss",
+    "extractText",
+    "extractAttribute",
+    "extractTable",
   ],
   extractAttribute: [
     "getElementByXpath",
     "getElementsByXpath",
     "getElementByCss",
     "getElementsByCss",
+    "extractText",
+    "extractAttribute",
+    "extractTable",
   ],
   waitForPageLoad: ["navigateTo"],
   waitForFullLoad: ["navigateTo"],
@@ -70,11 +79,10 @@ export const defaultSteps = [
     },
   },
   {
-    getElementsByCss: 'table'
+    getElementsByCss: "table",
   },
 
   {
-    extractTable: null
-  }
-  
+    extractTable: null,
+  },
 ];
