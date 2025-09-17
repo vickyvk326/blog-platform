@@ -1,10 +1,6 @@
 // app/automation/page.tsx
 "use client";
 
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,6 +12,10 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -23,15 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  AlertCircleIcon,
-  CheckCircle2,
-  CheckCircle2Icon,
-  Loader2,
-  Plus,
-  PopcornIcon,
-  Trash2,
-} from "lucide-react";
+import { CheckCircle2, Loader2, Plus, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { flow } from "@/app/api/scrape/flow/route";
@@ -42,10 +34,9 @@ import {
   Action,
   defaultSteps,
 } from "@/constants/scraper/flow";
+import { SavedFlow, deleteFlow, getSavedFlows, saveFlow } from "@/lib/storage";
 import { bufferToImageUrl } from "@/lib/utils";
 import Image from "next/image";
-import { deleteFlow, getSavedFlows, SavedFlow, saveFlow } from "@/lib/storage";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function AutomationPage() {
   const [steps, setSteps] = useState<flow[]>(defaultSteps);
@@ -215,8 +206,9 @@ export default function AutomationPage() {
           {steps.map((step, idx) => {
             const action = Object.keys(step)[0] as Action;
             const value = step[action] as flow[Action];
-            
-            const prevAction = idx > 0 ? (Object.keys(steps[idx - 1])[0] as Action) : null;
+
+            const prevAction =
+              idx > 0 ? (Object.keys(steps[idx - 1])[0] as Action) : null;
 
             // filter valid actions based on rules
             const allowedActions = ACTIONS.filter((a) => {
