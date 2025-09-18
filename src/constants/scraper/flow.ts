@@ -1,10 +1,6 @@
 export const ACTIONS = [
   'navigateTo',
   'findElement',
-  // 'getElementByXpath',
-  // 'getElementsByXpath',
-  // 'getElementByCss',
-  // 'getElementsByCss',
   'clickElement',
   'extractText',
   'extractTable',
@@ -14,13 +10,13 @@ export const ACTIONS = [
   'screenshot',
   'executeJavaScript',
   'inputText',
-  'waitForXpathToDisappear',
-  'waitForCssToDisappear',
+  'waitForElementToDisappear',
   'scrollToTop',
   'scrollToBottom',
   'scrollIntoElement',
   'getRequest',
   'postRequest',
+  'extractPDF',
 ] as const;
 
 export type Action = (typeof ACTIONS)[number];
@@ -42,13 +38,13 @@ export const ACTION_RULES: Record<Action, Action[]> = {
   waitForFullLoad: ['navigateTo'],
   screenshot: [],
   executeJavaScript: [],
-  waitForXpathToDisappear: [],
-  waitForCssToDisappear: [],
+  waitForElementToDisappear: [],
   scrollToTop: [],
   scrollToBottom: [],
   scrollIntoElement: ['findElement'],
   getRequest: [],
   postRequest: [],
+  extractPDF: [],
 };
 
 export interface labelledAction {
@@ -59,41 +55,25 @@ export interface labelledAction {
   placeholder?: unknown;
 }
 
-export const ACTIONS_LABELS: Record<Action, { label: string; description: string; placeholder?: unknown }> = {
+export const ACTIONS_LABELS: Record<
+  Action,
+  { label: string; description: string; placeholder?: unknown; data?: unknown }
+> = {
   navigateTo: {
     label: 'Navigate to site',
     description: 'Go to a specific URL to start scraping data from there.',
     placeholder: { url: 'https://example.com', waitUntil: 'load', waitForFullLoad: true, timeout: 30 },
+    data: { url: 'https://example.com', waitUntil: 'load', waitForFullLoad: true, timeout: 30 },
   },
   findElement: {
     label: 'Find element',
     description: 'Find element using XPath, CSS selector, or ID.',
     placeholder: { by: 'xpath', locator: '//*[@id="main"]', timeout: 30, multiple: false },
+    data: { by: 'xpath', locator: '//*[@id="main"]', timeout: 30, multiple: false },
   },
-  // getElementByXpath: {
-  //   label: 'Get element by XPath',
-  //   description: 'Select a single element on the page using an XPath expression.',
-  //   placeholder: { locator: '//*[@id="main"]', timeout: 30 },
-  // },
-  // getElementsByXpath: {
-  //   label: 'Get elements by XPath',
-  //   description: 'Select multiple elements on the page using an XPath expression.',
-  //   placeholder: { locator: '//*[@class="item"]', timeout: 30 },
-  // },
-  // getElementByCss: {
-  //   label: 'Get element by CSS selector',
-  //   description: 'Select a single element on the page using a CSS selector.',
-  //   placeholder: { locator: 'table', timeout: 30 },
-  // },
-  // getElementsByCss: {
-  //   label: 'Get elements by CSS selector',
-  //   description: 'Select multiple elements on the page using a CSS selector.',
-  //   placeholder: { locator: 'table', timeout: 30 },
-  // },
   clickElement: {
     label: 'Click an element',
     description: 'Simulate a click action on a selected element.',
-    placeholder: null,
   },
   extractText: {
     label: 'Extract text from one or more elements',
@@ -107,16 +87,19 @@ export const ACTIONS_LABELS: Record<Action, { label: string; description: string
     label: 'Extract attribute from one or more elements',
     description: 'Extract the value of a specific attribute from a single element or list selected elements.',
     placeholder: 'href',
+    data: 'href',
   },
   waitForPageLoad: {
     label: 'Wait for page load',
     description: 'Wait for the page to load after navigation.',
     placeholder: { milliseconds: 3000 },
+    data: { milliseconds: 3000 },
   },
   waitForFullLoad: {
     label: 'Wait for full page load',
     description: 'Wait for a specified duration to ensure the page has fully loaded.',
     placeholder: '5000 (milliseconds)',
+    data: '5000 (milliseconds)',
   },
   screenshot: {
     label: 'Take a screenshot',
@@ -126,22 +109,20 @@ export const ACTIONS_LABELS: Record<Action, { label: string; description: string
     label: 'Execute custom JavaScript',
     description: 'Run custom JavaScript code within the context of the page.',
     placeholder: "document.body.style.backgroundColor = 'red';",
+    data: "document.body.style.backgroundColor = 'red';",
   },
   inputText: {
     label: 'Input text into a field',
     description: 'Type specified text into a selected input field.',
     placeholder: 'Sample text',
+    data: 'Sample text',
   },
-  waitForXpathToDisappear: {
-    label: 'Wait for an XPath element to disappear',
-    description: 'Pause execution until a specific element, identified by its XPath, is no longer present on the page.',
-    placeholder: '//*[@id="loading-indicator"]',
-  },
-  waitForCssToDisappear: {
-    label: 'Wait for a CSS element to disappear',
+  waitForElementToDisappear: {
+    label: 'Wait for an element to appear',
     description:
-      'Pause execution until a specific element, identified by its CSS selector, is no longer present on the page.',
-    placeholder: '.loading-indicator',
+      'Pause execution until a specific element, identified by its locator, is no longer present on the page.',
+    placeholder: { by: 'xpath', locator: '//*[@id="main"]', options: { timeout: 10, maxRetries: 3 } },
+    data: { by: 'xpath', locator: '//*[@id="main"]', options: { timeout: 10, maxRetries: 3 } },
   },
   scrollToBottom: {
     label: 'Scroll to the bottom of the page',
@@ -154,12 +135,19 @@ export const ACTIONS_LABELS: Record<Action, { label: string; description: string
   scrollIntoElement: {
     label: 'Scroll into view of an element',
     description: 'Scroll the page to bring a selected element into view.',
-    placeholder: null,
   },
   getRequest: {
     label: 'Make a GET request',
     description: 'Fetch data from a specified URL using a GET request.',
     placeholder: {
+      url: 'https://api.example.com/data',
+      returnJson: true,
+      headers: {},
+      params: {},
+      timeout: 30,
+      retries: 3,
+    },
+    data: {
       url: 'https://api.example.com/data',
       returnJson: true,
       headers: {},
@@ -174,6 +162,22 @@ export const ACTIONS_LABELS: Record<Action, { label: string; description: string
     placeholder: {
       url: 'https://api.example.com/submit',
       options: { data: { key: 'value' } },
+    },
+    data: {
+      url: 'https://api.example.com/submit',
+      options: { data: { key: 'value' } },
+    },
+  },
+  extractPDF: {
+    label: 'Extract PDF',
+    description: 'Extract text, tables, images,etc from a PDF',
+    placeholder: {
+      usingUrl: true,
+      options: {
+        url: 'https://www.antennahouse.com/hubfs/xsl-fo-sample/pdf/basic-link-1.pdf',
+        fileUpload: null,
+        extract: 'text',
+      },
     },
   },
 };
@@ -219,43 +223,24 @@ export const NSE_DERIVATIVES_STEPS: labelledAction[] = [
 
 export const defaultSteps: labelledAction[] = [
   {
-    label: 'Naviagte to site',
-    description: 'Go to a specific URL to start scraping data from there.',
-    action: 'navigateTo' as Action,
-    data: { url: 'https://example.com', waitUntil: 'load', waitForFullLoad: true, timeout: 30 },
-    placeholder: { url: 'https://example.com', waitUntil: 'load', waitForFullLoad: true, timeout: 30 },
-  },
-  {
-    label: 'Make a GET request',
-    action: 'getRequest' as Action,
-    description: 'Fetch data from a specified URL using a GET request.',
-    data: {
-      url: 'https://arbeitnow.com/api/job-board-api',
+    action: 'extractPDF',
+    label: 'Extract PDF',
+    description: 'Extract text, tables, images,etc from a PDF',
+    placeholder: {
+      usingUrl: true,
       options: {
-        returnJson: true,
-        headers: {
-          Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-          'Accept-Encoding': 'gzip, deflate, br',
-          'Accept-Language': 'en-US,en;q=0.9',
-          'Cache-Control': 'no-cache',
-          Connection: 'keep-alive',
-          Pragma: 'no-cache',
-          'Sec-Fetch-Dest': 'document',
-          'Sec-Fetch-Mode': 'navigate',
-          'Sec-Fetch-Site': 'none',
-          'Sec-Fetch-User': '?1',
-          'Upgrade-Insecure-Requests': '1',
-          'User-Agent':
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        },
-        params: {},
-        timeout: 30000,
-        retries: 3,
+        url: 'https://www.antennahouse.com/hubfs/xsl-fo-sample/pdf/basic-link-1.pdf',
+        fileUpload: null,
+        extract: 'text',
       },
     },
-    placeholder: {
-      url: 'https://arbeitnow.com/api/job-board-api',
-      options: { returnJson: true, headers: {}, params: {}, timeout: 30000, retries: 3 },
+    data: {
+      usingUrl: true,
+      options: {
+        url: 'https://www.antennahouse.com/hubfs/xsl-fo-sample/pdf/basic-link-1.pdf',
+        fileUpload: null,
+        extract: 'text',
+      },
     },
   },
 ];

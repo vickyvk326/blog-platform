@@ -6,7 +6,9 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 // Utility to convert buffer { type: "Buffer", data: [...] } to image URL
-export function bufferToImageUrl(bufferObj: { type: string; data: number[] }) {
+export type bufferObj = { type: string; data: number[] };
+
+export function bufferToImageUrl(bufferObj: bufferObj) {
   try {
     const uint8Array = new Uint8Array(bufferObj.data);
     const blob = new Blob([uint8Array], { type: 'image/png' }); // screenshots are usually PNG

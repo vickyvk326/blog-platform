@@ -17,10 +17,15 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CheckCircle2, Loader2, Plus, RotateCcw, Trash2 } from 'lucide-react';
+import { CircleCheckIcon, CircleXIcon, Loader2, Plus, RotateCcw, Trash2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
+import { flowResult } from '@/app/api/scrape/flow/route';
 import ExtractedTable from '@/components/scraper/ExtractedTable';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
+import { Textarea } from '@/components/ui/textarea';
 import {
   ACTIONS,
   ACTIONS_LABELS,
@@ -31,17 +36,14 @@ import {
   labelledAction,
 } from '@/constants/scraper/flow';
 import { SavedFlow, deleteFlow, getSavedFlows, saveFlow } from '@/lib/storage';
-import { bufferToImageUrl } from '@/lib/utils';
+import { bufferObj, bufferToImageUrl } from '@/lib/utils';
 import Image from 'next/image';
 import { toast } from 'sonner';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Switch } from '@/components/ui/switch';
-import { headers } from 'next/headers';
 
 export default function AutomationPage() {
-  const [steps, setSteps] = useState<labelledAction[]>(NSE_DERIVATIVES_STEPS);
+  const [steps, setSteps] = useState<labelledAction[]>(defaultSteps);
   const [loading, setLoading] = useState(false);
-  const [results, setResults] = useState<{ step: labelledAction; result?: unknown }[]>([]);
+  const [results, setResults] = useState<flowResult[]>([]);
 
   const addStep = () =>
     setSteps((prev) => [
@@ -53,6 +55,7 @@ export default function AutomationPage() {
         data: {
           url: '',
           waitUntil: 'load',
+          timeout: 30,
         },
         placeholder: { url: 'https://example.com', waitUntil: 'load' },
       },
@@ -89,7 +92,7 @@ export default function AutomationPage() {
           ? {
               action,
               ...ACTIONS_LABELS[action],
-              data: value,
+              ...(!!value && { data: value }),
             }
           : s,
       ),
@@ -177,6 +180,8 @@ export default function AutomationPage() {
     setSaved(getSavedFlows());
   };
 
+  console.log(steps);
+
   return (
     <div className='container mx-auto py-10 max-w-4xl space-y-6'>
       {/* Saved flows */}
@@ -242,7 +247,7 @@ export default function AutomationPage() {
                 <div className='flex items-center justify-between'>
                   <div className='flex flex-col md:flex-row items-center gap-2'>
                     <Label>Step {idx + 1}.</Label>
-                    <Select value={step.action} onValueChange={(val) => updateStep(idx, val as Action, '')}>
+                    <Select value={step.action} onValueChange={(val) => updateStep(idx, val as Action, null)}>
                       <SelectTrigger className='w-96'>
                         <SelectValue placeholder='Select action' />
                       </SelectTrigger>
@@ -323,6 +328,8 @@ export default function AutomationPage() {
                 const action = res.step.action;
                 const input = res.step.data;
                 const hasResult = res.result !== undefined;
+                const hasError = res.error !== undefined;
+                if (hasError) console.log(res.error);
                 return (
                   <div key={idx} className='flex items-start gap-4 border-b pb-4 last:border-b-0'>
                     <div className='flex flex-col items-center'>
@@ -335,7 +342,15 @@ export default function AutomationPage() {
                     <div className='flex-1 space-y-2 overflow-auto'>
                       <div className='flex items-center gap-2'>
                         <span className='font-semibold text-lg'>{res.step.label.toUpperCase()}</span>
-                        <CheckCircle2 className='h-5 w-5 text-green-600' />
+                        <Badge
+                          variant='secondary'
+                          className={`text-white ${
+                            hasError ? 'bg-red-500 dark:bg-red-600' : 'bg-green-500 dark:bg-green-600'
+                          }`}
+                        >
+                          {hasError ? <CircleXIcon /> : <CircleCheckIcon />}
+                          {hasError ? 'failed' : 'success'}
+                        </Badge>
                       </div>
 
                       {!!input && (
@@ -345,29 +360,39 @@ export default function AutomationPage() {
                       )}
 
                       {hasResult && (
-                        <div className='p-2 bg-muted rounded-md text-sm font-mono space-y-2 overflow-x-auto'>
+                        <div className='h-[300px] rounded-md border p-4 overflow-auto'>
                           {action === 'screenshot' && res.result?.type === 'Buffer' ? (
                             <Image
-                              src={bufferToImageUrl(res.result) || ''}
+                              src={bufferToImageUrl(res.result as bufferObj) || ''}
                               width={700}
                               height={300}
                               alt={`screenshot step ${idx + 1}`}
                               className='rounded-lg border shadow-md max-w-full mx-auto'
                             />
-                          ) : action === 'extractTable' &&
-                            Array.isArray(res.result) &&
-                            res.result.length &&
+                          ) : Array.isArray(res.result) && res.result.length ? (
                             Array.isArray(res.result[0]) ? (
-                            res.result.map((table, tableIndex) => (
-                              <ExtractedTable key={tableIndex} data={table || []} />
-                            ))
+                              res.result.map((table, tableIndex) => (
+                                <ExtractedTable key={tableIndex} data={table || []} />
+                              ))
+                            ) : (
+                              <ExtractedTable
+                                data={res.result.map((row) => ({ Title: typeof row === 'string' ? row : String(row) }))}
+                              />
+                            )
                           ) : typeof res.result === 'object' ? (
                             <div className='flex flex-col gap-2'>
-                              <strong>Result:</strong> <pre>{JSON.stringify(res.result, null, 2)}</pre>
+                              <strong>Result:</strong>
+                              <pre>{JSON.stringify(res.result, null, 2)}</pre>
                             </div>
                           ) : (
                             String(res.result)
                           )}
+                        </div>
+                      )}
+
+                      {hasError && (
+                        <div className='p-2 bg-muted rounded-md text-sm font-mono space-y-2 overflow-x-auto border border-red-600'>
+                          {String(res.error)}
                         </div>
                       )}
                     </div>
@@ -410,36 +435,39 @@ function ActionInputHandler({ action, value, placeholder, updateStep, idx }: any
   if (action === 'navigateTo') {
     return (
       <div className='space-y-2'>
-        <Input
-          placeholder={placeholder.url || 'https://example.com'}
-          className='w-full'
-          value={value?.url || ''}
-          onChange={(e) =>
-            updateStep(idx, 'navigateTo', {
-              ...value,
-              url: e.target.value,
-            })
-          }
-        />
+        <div className='flex items-center gap-2'>
+          <span className='w-12'>URL</span>
+          <Input
+            placeholder={placeholder.url || 'https://example.com'}
+            className='flex-1'
+            value={value?.url || ''}
+            onChange={(e) =>
+              updateStep(idx, 'navigateTo', {
+                ...value,
+                url: e.target.value,
+              })
+            }
+          />
+        </div>
 
         <div className='flex items-center space-x-2'>
           <Switch
             id='airplane-mode'
-            checked={value.waitForFullLoad ?? true}
+            checked={value?.waitForFullLoad ?? true}
             className='data-[state=checked]:bg-primary'
             aria-label='Wait for complete page load'
-            aria-checked={value.waitForFullLoad}
+            aria-checked={value?.waitForFullLoad}
             onClick={() =>
               updateStep(idx, 'navigateTo', {
                 ...value,
-                waitForFullLoad: !value.waitForFullLoad,
+                waitForFullLoad: !value?.waitForFullLoad,
               })
             }
           />
           <Label htmlFor='airplane-mode'>Wait for complete page load</Label>
         </div>
 
-        {!value.waitForFullLoad && (
+        {!value?.waitForFullLoad && (
           <div className='flex items-center gap-4'>
             <Select
               value={value?.waitUntil || ''}
@@ -484,7 +512,7 @@ function ActionInputHandler({ action, value, placeholder, updateStep, idx }: any
     return (
       <>
         <div className='flex items-center gap-2'>
-          <span>Using</span>
+          <span className='w-12'>Using</span>
           <Select
             value={value?.by || 'xpath'}
             onValueChange={(by) =>
@@ -506,7 +534,7 @@ function ActionInputHandler({ action, value, placeholder, updateStep, idx }: any
           <span>=</span>
           <Input
             placeholder={placeholder.locator || 'XPath or CSS selector'}
-            value={value.locator || ''}
+            value={value?.locator || ''}
             onChange={(e) => updateStep(idx, action, { ...value, locator: e.target.value })}
             className='w-72'
           />
@@ -515,14 +543,14 @@ function ActionInputHandler({ action, value, placeholder, updateStep, idx }: any
           <div className='flex items-center space-x-2'>
             <Switch
               id='multiple-elements'
-              checked={value.multiple ?? true}
+              checked={value?.multiple ?? true}
               className='data-[state=checked]:bg-primary'
               aria-label='Wait for complete page load'
-              aria-checked={value.multiple}
+              aria-checked={value?.multiple}
               onClick={() =>
                 updateStep(idx, action, {
                   ...value,
-                  multiple: !value.multiple,
+                  multiple: !value?.multiple,
                 })
               }
             />
@@ -532,7 +560,7 @@ function ActionInputHandler({ action, value, placeholder, updateStep, idx }: any
           <Input
             placeholder={placeholder.timeout || 'Timeout in seconds'}
             type='number'
-            value={value.timeout || 0}
+            value={value?.timeout || 30}
             onChange={(e) => updateStep(idx, action, { ...value, timeout: parseInt(e.target.value) })}
             className='w-32'
           />
@@ -619,33 +647,37 @@ function ActionInputHandler({ action, value, placeholder, updateStep, idx }: any
         <div className='flex items-center space-x-2'>
           <Switch
             id='get-return-json'
-            checked={value.options.returnJson ?? true}
+            checked={value?.options.returnJson ?? true}
             className='data-[state=checked]:bg-primary'
             aria-label='Wait for complete page load'
-            aria-checked={value.options.returnJson}
+            aria-checked={value?.options.returnJson}
             onClick={() =>
               updateStep(idx, action, {
                 ...value,
-                options: { ...value.options, returnJson: !value.options.returnJson },
+                options: { ...value?.options, returnJson: !value?.options.returnJson },
               })
             }
           />
           <Label htmlFor='get-return-json'>Return JSON</Label>
         </div>
-        <Input
-          placeholder='Options JSON'
-          value={JSON.stringify(value?.options.headers || {})}
-          onChange={(e) => {
-            try {
-              updateStep(idx, 'getRequest', {
-                ...value,
-                options: { ...value.options, headers: e.target.value },
-              });
-            } catch {
-              // ignore JSON errors
-            }
-          }}
-        />
+        <div className='grid w-full gap-3'>
+          <Label htmlFor='message'>headers</Label>
+          <Textarea
+            placeholder='Type your message here.'
+            id='message'
+            value={JSON.stringify(value?.options.headers || {})}
+            onChange={(e) => {
+              try {
+                updateStep(idx, 'getRequest', {
+                  ...value,
+                  options: { ...value?.options, headers: e.target.value },
+                });
+              } catch {
+                // ignore JSON errors
+              }
+            }}
+          />
+        </div>
       </div>
     );
   }
@@ -678,6 +710,63 @@ function ActionInputHandler({ action, value, placeholder, updateStep, idx }: any
           }}
         />
       </div>
+    );
+  }
+  if (action === 'extractPDF') {
+    return (
+      <>
+        <div className='flex items-center space-x-2'>
+          <Switch
+            id={idx}
+            checked={value?.usingUrl ?? false}
+            className='data-[state=checked]:bg-primary'
+            aria-label='Wait for complete page load'
+            aria-checked={value?.usingUrl}
+            onClick={() =>
+              updateStep(idx, action, {
+                ...value,
+                usingUrl: !value?.usingUrl,
+              })
+            }
+          />
+          <Label htmlFor={idx}>Using link</Label>
+        </div>
+        {!!value?.usingUrl ? (
+          <Input
+            placeholder={placeholder?.options?.url}
+            value={value?.options?.url || ''}
+            onChange={(e) => {
+              updateStep(idx, action, {
+                ...value,
+                options: { ...value.options, url: e.target.value },
+              });
+            }}
+          />
+        ) : (
+          <div className='grid w-full max-w-sm items-center gap-3'>
+            <Label htmlFor={`pdf-${idx}`}>Upload PDF</Label>
+            <Input id={`pdf-${idx}`} type='file' accept='application/pdf' />
+          </div>
+        )}
+        <Select
+          value={value?.options?.extract || 'text'}
+          onValueChange={(extract) =>
+            updateStep(idx, action, {
+              ...value,
+              options: { ...(value?.options || {}), extract },
+            })
+          }
+        >
+          <SelectTrigger className='w-72'>
+            <SelectValue placeholder='Select what to extract' />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value='text'>Text</SelectItem>
+            <SelectItem value='table'>Table</SelectItem>
+            <SelectItem value='images'>Images</SelectItem>
+          </SelectContent>
+        </Select>
+      </>
     );
   }
   return null;

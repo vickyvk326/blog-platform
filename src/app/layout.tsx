@@ -22,7 +22,7 @@ export default function RootLayout({
       <body className={`${inter.className} antialiased`}>
         <ThemeProvider attribute='class' defaultTheme='system' enableSystem disableTransitionOnChange>
           <Navbar />
-          <main className='container py-6'>{children}</main>
+          <main className='container py-6 mx-auto'>{children}</main>
           <Toaster />
         </ThemeProvider>
       </body>

@@ -1,5 +1,5 @@
 import { Action, labelledAction } from '@/constants/scraper/flow';
-import { handleApiError } from '@/lib/next/errors';
+import { downloadPDF, runPythonScript } from '@/lib/serverUtils';
 import Scraper, { RequestOptions, waitUntil } from '@/utilities/WebScraper';
 import { NextRequest, NextResponse } from 'next/server';
 import { Locator } from 'playwright';
@@ -70,8 +70,8 @@ const handleStep = async (
           else if (by === 'css') return await scraper.getElementByCss(locator, { timeout: findElementTimeout * 1000 });
           else if (by === 'id') throw new Error('Finding element by ID is not supported yet');
         } else {
-          if (by === 'xpath') return await scraper.getElementByXPath(locator, { timeout: findElementTimeout * 1000 });
-          else if (by === 'css') return await scraper.getElementByCss(locator, { timeout: findElementTimeout * 1000 });
+          if (by === 'xpath') return await scraper.getElementsByXPath(locator, { timeout: findElementTimeout * 1000 });
+          else if (by === 'css') return await scraper.getElementsByCss(locator, { timeout: findElementTimeout * 1000 });
           else if (by === 'id') throw new Error('Finding element by ID is not supported yet');
         }
       case 'clickElement':
@@ -103,16 +103,25 @@ const handleStep = async (
         const screenshotData = await scraper.takeScreenshot();
         return screenshotData;
       case 'executeJavaScript':
-        await scraper.executeScript(value);
-        break;
+        return await scraper.executeScript(value);
       case 'inputText':
         await scraper.inputText(prevValue as Locator, value);
         break;
-      case 'waitForXpathToDisappear':
-        await scraper.waitForElementToDisappear('XPATH', value);
-        break;
-      case 'waitForCssToDisappear':
-        await scraper.waitForElementToDisappear('CSS', value);
+      case 'waitForElementToDisappear':
+        const {
+          by: selectorType,
+          locator: selector,
+          options: waitForDisapperOptions = {},
+        }: {
+          by: 'xpath' | 'css' | 'id';
+          locator: string;
+          options: { timeout?: number; maxRetries?: number };
+        } = value;
+        await scraper.waitForElementToDisappear(
+          selectorType.toUpperCase() as 'XPATH' | 'CSS' | 'ID',
+          selector,
+          waitForDisapperOptions,
+        );
         break;
       case 'scrollToTop':
         await scraper.executeScript('window.scrollTo(0, 0);');
@@ -132,6 +141,30 @@ const handleStep = async (
           options?: RequestOptions;
         };
         return await scraper.post(postUrl, postOptions);
+      case 'extractPDF':
+        const pythonScript = 'C:\\Users\\User\\Desktop\\react\\blog-platform\\src\\python\\scripts\\playground.py';
+        const downloadsPath = 'C:\\Users\\User\\Desktop\\react\\blog-platform\\src\\python\\downloads';
+
+        const { usingUrl, options: pdfOptions } = value;
+
+        let pdfPath = '';
+        if (usingUrl) {
+          const downloadedPdfPath = await downloadPDF(pdfOptions.url, downloadsPath);
+          pdfPath = downloadedPdfPath;
+        }
+
+        const args = [pdfPath, pdfOptions.extract];
+
+        const stdOutList = await runPythonScript(pythonScript, args);
+
+        let parsedJson = {};
+        if (stdOutList && Array.isArray(stdOutList)) {
+          for (const stdOut of stdOutList) {
+            const pages = JSON.parse(stdOut);
+            parsedJson = { ...parsedJson, ...pages };
+          }
+        }
+        return parsedJson;
       default:
         throw new Error(`Unknown action: ${action}`);
     }
@@ -140,15 +173,16 @@ const handleStep = async (
   }
 };
 
+export type flowResult = { step: labelledAction; result?: Awaited<ReturnType<typeof handleStep>>; error?: unknown };
+
 export async function POST(request: NextRequest) {
   const scraper = new Scraper();
   let stepCounter = 0;
+  const results: flowResult[] = [];
+  const automationFlows: flowReqBody = await request.json();
   try {
-    const automationFlows: flowReqBody = await request.json();
-
     await scraper.init();
 
-    const results = [];
     let lastResult: unknown = null;
 
     for (const step of automationFlows.steps) {
@@ -169,17 +203,24 @@ export async function POST(request: NextRequest) {
       const shouldStoreResult = [
         'extractText',
         'extractTable',
+        'extractPDF',
         'extractAttribute',
         'screenshot',
         'getRequest',
         'postRequest',
+        'executeJavaScript',
       ].includes(action);
+      console.log('shouldStoreResult', shouldStoreResult, result);
 
       results.push({ step, ...(shouldStoreResult && { result }) });
     }
     return NextResponse.json({ success: true, results });
   } catch (error) {
-    return handleApiError(error);
+    results.push({
+      step: automationFlows.steps[stepCounter - 1],
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return NextResponse.json({ success: false, results });
   } finally {
     await scraper.close();
   }

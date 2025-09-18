@@ -14,8 +14,9 @@ function ExtractedTable({ data }: { data: TableResult[] }) {
   return (
     <>
       <DownloadExcel outputFileName='table.xlsx' headers={headers} rows={data.map((row) => Object.values(row))} />
-      <div className='rounded-lg border shadow-sm overflow-x-auto'>
-        <Table className='overflow-x-auto mt-2 even:bg-muted'>
+      
+      <div className='rounded-lg border shadow-sm overflow-auto mt-2'>
+        <Table className='overflow-auto mt-2 even:bg-muted' color='#333'>
           <TableHeader>
             <TableRow>
               {headers.map((h) => (

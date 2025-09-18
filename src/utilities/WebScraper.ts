@@ -411,7 +411,7 @@ class Scraper {
       if (!this.page) throw new Error('Page not initialised.');
     }
 
-    const { timeout = 30000, returnByValue = true, awaitPromise = true } = options;
+    const { timeout = 30000, returnByValue = true, } = options;
 
     try {
       // Handle both string and function input
@@ -546,7 +546,7 @@ class Scraper {
   }
 
   async waitForElementToDisappear(
-    selectorType: 'XPATH' | 'CSS',
+    selectorType: 'XPATH' | 'CSS' | 'ID',
     selector: string,
     options: { timeout?: number; maxRetries?: number } = {},
   ): Promise<void> {
