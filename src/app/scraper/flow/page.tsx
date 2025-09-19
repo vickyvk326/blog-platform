@@ -1,43 +1,32 @@
-// app/automation/page.tsx
 'use client';
 
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CircleCheckIcon, CircleXIcon, Loader2, Plus, RotateCcw, Trash2 } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
-
 import { flowResult } from '@/app/api/scrape/flow/route';
+import ActionInput from '@/components/scraper/ActionInput';
+import DeleteConfirmationModal from '@/components/scraper/DeleteConfirmationModal';
 import ExtractedTable from '@/components/scraper/ExtractedTable';
+import SaveFlowSheet from '@/components/scraper/SaveFlowSheet';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
-import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
+
 import {
   ACTIONS,
   ACTIONS_LABELS,
   ACTION_RULES,
   Action,
-  NSE_DERIVATIVES_STEPS,
+  EXAMPLE_FLOWS,
   defaultSteps,
   labelledAction,
 } from '@/constants/scraper/flow';
 import { SavedFlow, deleteFlow, getSavedFlows, saveFlow } from '@/lib/storage';
 import { bufferObj, bufferToImageUrl } from '@/lib/utils';
+import { CircleCheckIcon, CircleXIcon, Loader2, Plus, RotateCcw, XIcon } from 'lucide-react';
 import Image from 'next/image';
+import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
 export default function AutomationPage() {
@@ -103,6 +92,7 @@ export default function AutomationPage() {
   const erroRef = useRef<HTMLParagraphElement>(null);
 
   const resultRef = useRef<HTMLDivElement>(null);
+  const stepsRef = useRef<HTMLDivElement>(null);
 
   const runAutomation = async () => {
     setResults([]);
@@ -151,18 +141,26 @@ export default function AutomationPage() {
   };
 
   const [name, setName] = useState('');
-
+  const [showSheet, setShowSheet] = useState(false);
   const [saved, setSaved] = useState<SavedFlow[]>([]);
 
   useEffect(() => {
     setSaved(getSavedFlows());
   }, []);
 
+  const handleReset = () => {
+    setSteps(defaultSteps);
+    setResults([]);
+    setError(null);
+    setName('');
+  };
+
   const handleSave = () => {
-    if (!name) return alert('Enter a name');
+    if (!name || name.trim().length === 0 || steps.length === 0) return;
     saveFlow({ name, steps });
     setSaved(getSavedFlows());
     setName('');
+    setShowSheet(false);
     toast.success('Task completed', {
       description: 'Flow saved successfully',
     });
@@ -170,17 +168,19 @@ export default function AutomationPage() {
 
   const handleLoad = (flow: SavedFlow) => {
     setSteps(flow.steps);
+    stepsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     toast.success('Task completed', {
       description: 'Flow loaded successfully',
     });
   };
 
-  const handleDelete = (flowName: string) => {
+  const handleDelete = (flowName: string, isPromoted?: boolean) => {
+    if (isPromoted) return;
     deleteFlow(flowName);
     setSaved(getSavedFlows());
   };
 
-  console.log(steps);
+  const displayFlows = [...EXAMPLE_FLOWS, ...saved];
 
   return (
     <div className='container mx-auto py-10 max-w-4xl space-y-6'>
@@ -191,15 +191,20 @@ export default function AutomationPage() {
             <AccordionItem value='item-1'>
               <AccordionTrigger>Saved Flows</AccordionTrigger>
               <AccordionContent>
-                {saved.length === 0 && <p className='text-sm text-muted-foreground'>No saved flows</p>}
-                {saved.map((flow) => (
-                  <div key={flow.name} className='flex items-center justify-between border rounded p-2 my-2'>
+                {displayFlows.length === 0 && <p className='text-sm text-muted-foreground'>No saved flows</p>}
+                {displayFlows.map((flow) => (
+                  <div key={flow.name} className='flex items-center justify-between border rounded-xl p-2 my-2'>
                     <span className='font-medium'>{flow.name}</span>
-                    <div className='flex gap-2'>
-                      <Button variant='secondary' size='sm' onClick={() => handleLoad(flow)}>
+                    <div className='flex items-center gap-3'>
+                      <Button variant='secondary' onClick={() => handleLoad(flow)}>
                         Load
                       </Button>
-                      <ConfirmationModal text='Delete' onConfirm={handleDelete} params={[flow.name]} />
+                      <DeleteConfirmationModal
+                        text='Delete'
+                        onConfirm={handleDelete}
+                        params={[flow.name, flow.isPromoted]}
+                        isDisabled={flow.isPromoted}
+                      />
                     </div>
                   </div>
                 ))}
@@ -212,23 +217,26 @@ export default function AutomationPage() {
       {/* Create a new flow */}
       <Card>
         <CardHeader>
-          <CardTitle className='text-xl'>Create a new automation flow</CardTitle>
+          <CardTitle className='text-xl'>
+            <h1>Create a new automation flow</h1>
+          </CardTitle>
         </CardHeader>
         <CardContent className='space-y-6'>
-          <div className='flex justify-between mb-2'>
+          <div className='flex justify-between mb-2' ref={stepsRef}>
             <Label className='text-lg'>Define Steps</Label>
-            <Button
-              variant={'destructive'}
-              onClick={() => {
-                setSteps(defaultSteps);
-                setResults([]);
-                setError(null);
-                setName('');
-              }}
-            >
-              <RotateCcw />
-              Reset
-            </Button>
+            <div className='flex items-center gap-2'>
+              <SaveFlowSheet
+                showSheet={showSheet}
+                setShowSheet={setShowSheet}
+                name={name}
+                setName={setName}
+                handleSave={handleSave}
+              />
+              <Button variant={'destructive'} onClick={handleReset}>
+                <RotateCcw />
+                Reset
+              </Button>
+            </div>
           </div>
 
           {/* Steps */}
@@ -243,7 +251,6 @@ export default function AutomationPage() {
 
             return (
               <div key={idx} className='border rounded-lg p-4 space-y-4 bg-muted/30'>
-                {/* Action Selector */}
                 <div className='flex items-center justify-between'>
                   <div className='flex flex-col md:flex-row items-center gap-2'>
                     <Label>Step {idx + 1}.</Label>
@@ -260,14 +267,18 @@ export default function AutomationPage() {
                       </SelectContent>
                     </Select>
                   </div>
-                  {/* Remove the step */}
-                  <Button size='icon' variant='destructive' onClick={() => removeStep(idx)}>
-                    <Trash2 className='w-4 h-4' />
+                  <Button
+                    size='icon'
+                    variant={'ghost'}
+                    className='text-red-500 hover:text-red-600'
+                    onClick={() => removeStep(idx)}
+                  >
+                    <XIcon className='w-6 h-6' />
                   </Button>
                 </div>
 
                 {/* Actions input handler */}
-                <ActionInputHandler
+                <ActionInput
                   action={step.action}
                   value={step.data}
                   placeholder={step.placeholder}
@@ -300,19 +311,6 @@ export default function AutomationPage() {
             {loading && <Loader2 className='mr-2 h-4 w-4 animate-spin' />}
             Run Automation
           </Button>
-
-          {/* Save flow in local storage */}
-          <div className='container py-5 space-y-6' ref={resultRef} autoFocus>
-            <Card>
-              <CardHeader>
-                <CardTitle>Save Flow</CardTitle>
-              </CardHeader>
-              <CardContent className='flex gap-2'>
-                <Input placeholder='Flow name' value={name} onChange={(e) => setName(e.target.value)} />
-                <Button onClick={handleSave}>Save</Button>
-              </CardContent>
-            </Card>
-          </div>
         </CardContent>
       </Card>
 
@@ -324,12 +322,10 @@ export default function AutomationPage() {
               <CardTitle>Execution Results</CardTitle>
             </CardHeader>
             <CardContent className='space-y-5'>
+              {/* Individual results */}
               {results.map((res, idx) => {
-                const action = res.step.action;
-                const input = res.step.data;
                 const hasResult = res.result !== undefined;
                 const hasError = res.error !== undefined;
-                if (hasError) console.log(res.error);
                 return (
                   <div key={idx} className='flex items-start gap-4 border-b pb-4 last:border-b-0'>
                     <div className='flex flex-col items-center'>
@@ -342,6 +338,7 @@ export default function AutomationPage() {
                     <div className='flex-1 space-y-2 overflow-auto'>
                       <div className='flex items-center gap-2'>
                         <span className='font-semibold text-lg'>{res.step.label.toUpperCase()}</span>
+                        <span className='text-muted-foreground text-xs'>{res.timeTaken.toFixed(2)}s</span>
                         <Badge
                           variant='secondary'
                           className={`text-white ${
@@ -353,15 +350,15 @@ export default function AutomationPage() {
                         </Badge>
                       </div>
 
-                      {!!input && (
+                      {!!res.step.data && (
                         <div className='text-sm text-muted-foreground'>
-                          <strong>Value:</strong> <code>{JSON.stringify(input)}</code>
+                          <strong>Value:</strong> <code>{JSON.stringify(res.step.data)}</code>
                         </div>
                       )}
 
                       {hasResult && (
-                        <div className='h-[300px] rounded-md border p-4 overflow-auto'>
-                          {action === 'screenshot' && res.result?.type === 'Buffer' ? (
+                        <div className='rounded-md border p-4 overflow-auto'>
+                          {res.step.action === 'screenshot' && res.result?.type === 'Buffer' ? (
                             <Image
                               src={bufferToImageUrl(res.result as bufferObj) || ''}
                               width={700}
@@ -372,7 +369,13 @@ export default function AutomationPage() {
                           ) : Array.isArray(res.result) && res.result.length ? (
                             Array.isArray(res.result[0]) ? (
                               res.result.map((table, tableIndex) => (
-                                <ExtractedTable key={tableIndex} data={table || []} />
+                                <div key={tableIndex} className='my-4 flex flex-col'>
+                                  <strong>Table {tableIndex + 1}:</strong>
+                                  <ExtractedTable data={table || []} />
+                                  {Array.isArray(res.result) && res.result?.length > tableIndex + 1 && (
+                                    <Separator className='mt-5' />
+                                  )}
+                                </div>
                               ))
                             ) : (
                               <ExtractedTable
@@ -405,369 +408,4 @@ export default function AutomationPage() {
       )}
     </div>
   );
-}
-
-function ConfirmationModal({ text = 'delete', onConfirm, params = [] }: any) {
-  return (
-    <AlertDialog>
-      <AlertDialogTrigger asChild>
-        <Button variant={'destructive'}>{text}</Button>
-      </AlertDialogTrigger>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Are you absolutely sure you want to delete this step?</AlertDialogTitle>
-          <AlertDialogDescription>
-            This action cannot be undone. This will permanently delete your account and remove your data from our
-            servers.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction onClick={() => onConfirm(...params)}>Proceed</AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-  );
-}
-
-function ActionInputHandler({ action, value, placeholder, updateStep, idx }: any) {
-  // Navigate to
-  if (action === 'navigateTo') {
-    return (
-      <div className='space-y-2'>
-        <div className='flex items-center gap-2'>
-          <span className='w-12'>URL</span>
-          <Input
-            placeholder={placeholder.url || 'https://example.com'}
-            className='flex-1'
-            value={value?.url || ''}
-            onChange={(e) =>
-              updateStep(idx, 'navigateTo', {
-                ...value,
-                url: e.target.value,
-              })
-            }
-          />
-        </div>
-
-        <div className='flex items-center space-x-2'>
-          <Switch
-            id='airplane-mode'
-            checked={value?.waitForFullLoad ?? true}
-            className='data-[state=checked]:bg-primary'
-            aria-label='Wait for complete page load'
-            aria-checked={value?.waitForFullLoad}
-            onClick={() =>
-              updateStep(idx, 'navigateTo', {
-                ...value,
-                waitForFullLoad: !value?.waitForFullLoad,
-              })
-            }
-          />
-          <Label htmlFor='airplane-mode'>Wait for complete page load</Label>
-        </div>
-
-        {!value?.waitForFullLoad && (
-          <div className='flex items-center gap-4'>
-            <Select
-              value={value?.waitUntil || ''}
-              onValueChange={(waitUntil) =>
-                updateStep(idx, 'navigateTo', {
-                  ...value,
-                  waitUntil,
-                })
-              }
-            >
-              <SelectTrigger className='w-72'>
-                <SelectValue placeholder='Select a loading strategy' />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value='domcontentloaded'>Wait for DOM content load</SelectItem>
-                <SelectItem value='load'>Wait until page load</SelectItem>
-                <SelectItem value='networkidle'>Wait until network idle</SelectItem>
-              </SelectContent>
-            </Select>
-            <span>upto</span>
-            <Input
-              placeholder={String(placeholder.timeout) || '30000'}
-              type='number'
-              value={value?.timeout || ''}
-              onChange={(e) =>
-                updateStep(idx, 'navigateTo', {
-                  ...value,
-                  timeout: Number(e.target.value),
-                })
-              }
-              className='w-32'
-            />
-            <span>seconds</span>
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  // Get elements
-  if (action === 'findElement') {
-    return (
-      <>
-        <div className='flex items-center gap-2'>
-          <span className='w-12'>Using</span>
-          <Select
-            value={value?.by || 'xpath'}
-            onValueChange={(by) =>
-              updateStep(idx, action, {
-                ...value,
-                by,
-              })
-            }
-          >
-            <SelectTrigger className='w-72'>
-              <SelectValue placeholder='Select a loading strategy' />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value='xpath'>XPATH</SelectItem>
-              <SelectItem value='css'>CSS</SelectItem>
-              <SelectItem value='id'>ID</SelectItem>
-            </SelectContent>
-          </Select>
-          <span>=</span>
-          <Input
-            placeholder={placeholder.locator || 'XPath or CSS selector'}
-            value={value?.locator || ''}
-            onChange={(e) => updateStep(idx, action, { ...value, locator: e.target.value })}
-            className='w-72'
-          />
-        </div>
-        <div className='flex items-center gap-2'>
-          <div className='flex items-center space-x-2'>
-            <Switch
-              id='multiple-elements'
-              checked={value?.multiple ?? true}
-              className='data-[state=checked]:bg-primary'
-              aria-label='Wait for complete page load'
-              aria-checked={value?.multiple}
-              onClick={() =>
-                updateStep(idx, action, {
-                  ...value,
-                  multiple: !value?.multiple,
-                })
-              }
-            />
-            <Label htmlFor='multiple-elements'>Find all matches</Label>
-          </div>
-          <span>and take upto</span>
-          <Input
-            placeholder={placeholder.timeout || 'Timeout in seconds'}
-            type='number'
-            value={value?.timeout || 30}
-            onChange={(e) => updateStep(idx, action, { ...value, timeout: parseInt(e.target.value) })}
-            className='w-32'
-          />
-          <span>seconds</span>
-        </div>
-      </>
-    );
-  }
-
-  if (action === 'extractAttribute') {
-    return (
-      <>
-        <Input
-          placeholder='Attribute name'
-          value={value || ''}
-          onChange={(e) => updateStep(idx, 'extractAttribute', e.target.value)}
-        />
-      </>
-    );
-  }
-
-  if (['waitForPageLoad', 'waitForFullLoad'].includes(action)) {
-    return (
-      <>
-        <Input
-          type='number'
-          placeholder='Timeout (ms)'
-          value={value || ''}
-          onChange={(e) => updateStep(idx, action, Number(e.target.value))}
-        />
-      </>
-    );
-  }
-
-  if (action === 'executeJavaScript') {
-    return (
-      <>
-        <Input
-          placeholder='JS code'
-          value={value || ''}
-          onChange={(e) => updateStep(idx, 'executeJavaScript', e.target.value)}
-        />
-      </>
-    );
-  }
-
-  if (action === 'inputText') {
-    return (
-      <>
-        <Input
-          placeholder='Text to input'
-          value={value || ''}
-          onChange={(e) => updateStep(idx, 'inputText', e.target.value)}
-        />
-      </>
-    );
-  }
-
-  if (['waitForXpathToDisappear', 'waitForCssToDisappear'].includes(action)) {
-    return (
-      <>
-        <Input
-          placeholder={placeholder || 'CSS selector or XPath'}
-          value={value || ''}
-          onChange={(e) => updateStep(idx, action, e.target.value)}
-        />
-      </>
-    );
-  }
-
-  if (action === 'getRequest') {
-    return (
-      <div className='space-y-2'>
-        <Input
-          placeholder='URL'
-          value={value?.url || ''}
-          onChange={(e) =>
-            updateStep(idx, 'getRequest', {
-              ...value,
-              url: e.target.value,
-            })
-          }
-        />
-        <div className='flex items-center space-x-2'>
-          <Switch
-            id='get-return-json'
-            checked={value?.options.returnJson ?? true}
-            className='data-[state=checked]:bg-primary'
-            aria-label='Wait for complete page load'
-            aria-checked={value?.options.returnJson}
-            onClick={() =>
-              updateStep(idx, action, {
-                ...value,
-                options: { ...value?.options, returnJson: !value?.options.returnJson },
-              })
-            }
-          />
-          <Label htmlFor='get-return-json'>Return JSON</Label>
-        </div>
-        <div className='grid w-full gap-3'>
-          <Label htmlFor='message'>headers</Label>
-          <Textarea
-            placeholder='Type your message here.'
-            id='message'
-            value={JSON.stringify(value?.options.headers || {})}
-            onChange={(e) => {
-              try {
-                updateStep(idx, 'getRequest', {
-                  ...value,
-                  options: { ...value?.options, headers: e.target.value },
-                });
-              } catch {
-                // ignore JSON errors
-              }
-            }}
-          />
-        </div>
-      </div>
-    );
-  }
-
-  if (action === 'postRequest') {
-    return (
-      <div className='space-y-2'>
-        <Input
-          placeholder='URL'
-          value={value?.url || ''}
-          onChange={(e) =>
-            updateStep(idx, 'postRequest', {
-              ...value,
-              url: e.target.value,
-            })
-          }
-        />
-        <Input
-          placeholder='Options JSON'
-          value={JSON.stringify(value?.options || {})}
-          onChange={(e) => {
-            try {
-              updateStep(idx, 'postRequest', {
-                ...value,
-                options: JSON.parse(e.target.value),
-              });
-            } catch {
-              // ignore JSON errors
-            }
-          }}
-        />
-      </div>
-    );
-  }
-  if (action === 'extractPDF') {
-    return (
-      <>
-        <div className='flex items-center space-x-2'>
-          <Switch
-            id={idx}
-            checked={value?.usingUrl ?? false}
-            className='data-[state=checked]:bg-primary'
-            aria-label='Wait for complete page load'
-            aria-checked={value?.usingUrl}
-            onClick={() =>
-              updateStep(idx, action, {
-                ...value,
-                usingUrl: !value?.usingUrl,
-              })
-            }
-          />
-          <Label htmlFor={idx}>Using link</Label>
-        </div>
-        {!!value?.usingUrl ? (
-          <Input
-            placeholder={placeholder?.options?.url}
-            value={value?.options?.url || ''}
-            onChange={(e) => {
-              updateStep(idx, action, {
-                ...value,
-                options: { ...value.options, url: e.target.value },
-              });
-            }}
-          />
-        ) : (
-          <div className='grid w-full max-w-sm items-center gap-3'>
-            <Label htmlFor={`pdf-${idx}`}>Upload PDF</Label>
-            <Input id={`pdf-${idx}`} type='file' accept='application/pdf' />
-          </div>
-        )}
-        <Select
-          value={value?.options?.extract || 'text'}
-          onValueChange={(extract) =>
-            updateStep(idx, action, {
-              ...value,
-              options: { ...(value?.options || {}), extract },
-            })
-          }
-        >
-          <SelectTrigger className='w-72'>
-            <SelectValue placeholder='Select what to extract' />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value='text'>Text</SelectItem>
-            <SelectItem value='table'>Table</SelectItem>
-            <SelectItem value='images'>Images</SelectItem>
-          </SelectContent>
-        </Select>
-      </>
-    );
-  }
-  return null;
 }

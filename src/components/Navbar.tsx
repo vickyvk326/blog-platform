@@ -18,8 +18,19 @@ export function Navbar() {
   const pathname = usePathname();
 
   return (
-    <header className='border-b bg-background'>
-      <nav className='px-4 flex items-center justify-between h-14 mx-auto'>
+    <header className='fixed inset-x-0 top-0 z-50'>
+      <nav
+        className='
+          mx-auto w-full px-4 sm:px-6 lg:px-8
+          py-3
+          flex items-center justify-between gap-4
+          backdrop-blur-md bg-white/40 dark:bg-gray-900/40
+          border-b border-white/10 dark:border-gray-800/40
+          shadow-sm
+          backdrop-saturate-150
+          '
+        style={{ WebkitBackdropFilter: 'blur(8px)' }}
+      >
         <Image src={'/globe.svg'} alt='logo' width={30} height={30} />
         <div className='flex items-center space-x-4'>
           {routes.map((route) => (

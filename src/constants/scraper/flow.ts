@@ -1,3 +1,5 @@
+import { SavedFlow } from '@/lib/storage';
+
 export const ACTIONS = [
   'navigateTo',
   'findElement',
@@ -5,8 +7,6 @@ export const ACTIONS = [
   'extractText',
   'extractTable',
   'extractAttribute',
-  'waitForPageLoad',
-  'waitForFullLoad',
   'screenshot',
   'executeJavaScript',
   'inputText',
@@ -25,17 +25,11 @@ export type Action = (typeof ACTIONS)[number];
 export const ACTION_RULES: Record<Action, Action[]> = {
   navigateTo: [],
   findElement: [],
-  // getElementByXpath: [],
-  // getElementsByXpath: [],
-  // getElementByCss: [],
-  // getElementsByCss: [],
   clickElement: ['findElement'],
   inputText: ['findElement'],
   extractText: ['findElement', 'extractText', 'extractAttribute', 'extractTable'],
   extractTable: ['findElement', 'extractText', 'extractAttribute', 'extractTable'],
   extractAttribute: ['findElement', 'extractText', 'extractAttribute', 'extractTable'],
-  waitForPageLoad: ['navigateTo'],
-  waitForFullLoad: ['navigateTo'],
   screenshot: [],
   executeJavaScript: [],
   waitForElementToDisappear: [],
@@ -88,18 +82,6 @@ export const ACTIONS_LABELS: Record<
     description: 'Extract the value of a specific attribute from a single element or list selected elements.',
     placeholder: 'href',
     data: 'href',
-  },
-  waitForPageLoad: {
-    label: 'Wait for page load',
-    description: 'Wait for the page to load after navigation.',
-    placeholder: { milliseconds: 3000 },
-    data: { milliseconds: 3000 },
-  },
-  waitForFullLoad: {
-    label: 'Wait for full page load',
-    description: 'Wait for a specified duration to ensure the page has fully loaded.',
-    placeholder: '5000 (milliseconds)',
-    data: '5000 (milliseconds)',
   },
   screenshot: {
     label: 'Take a screenshot',
@@ -182,65 +164,93 @@ export const ACTIONS_LABELS: Record<
   },
 };
 
-export const NSE_DERIVATIVES_STEPS: labelledAction[] = [
+export const NSE_DERIVATIVES_TABLE_FLOW: labelledAction[] = [
   {
     label: 'Naviagte to site',
     description: 'Go to a specific URL to start scraping data from there.',
-    action: 'navigateTo' as Action,
+    action: 'navigateTo',
+    placeholder: {
+      url: 'https://example.com',
+      waitUntil: 'load',
+      timeout: 30,
+    },
     data: {
       url: 'https://www.nseindia.com/market-data/equity-derivatives-watch',
       waitUntil: 'load',
       waitForFullLoad: true,
       timeout: 30,
     },
-    placeholder: { url: 'https://example.com', waitUntil: 'load', timeout: 30 },
   },
   {
     label: 'Find element',
     description: 'Find element using XPath, CSS selector, or ID.',
-    action: 'findElement' as Action,
-    data: { by: 'xpath', locator: "//*[@id='eqderivativesTable']/tbody/tr[2]", timeout: 30, multiple: false },
-    placeholder: { by: 'xpath', locator: '//*[@id="eqderivativesTable"]/tbody/tr[2]', timeout: 30, multiple: false },
+    action: 'findElement',
+    placeholder: {
+      by: 'xpath',
+      locator: '//*[@id="eqderivativesTable"]/tbody/tr[2]',
+      timeout: 30,
+      multiple: false,
+    },
+    data: {
+      by: 'xpath',
+      locator: "//*[@id='eqderivativesTable']/tbody/tr[2]",
+      timeout: 30,
+      multiple: false,
+    },
   },
   {
+    action: 'findElement',
     label: 'Find element',
     description: 'Find element using XPath, CSS selector, or ID.',
-    action: 'findElement' as Action,
-    data: { by: 'css', locator: 'table#eqderivativesTable', timeout: 30, multiple: false },
-    placeholder: { by: 'css', locator: 'table#eqderivativesTable', timeout: 30, multiple: false },
+    placeholder: {
+      by: 'xpath',
+      locator: '//*[@id="main"]',
+      timeout: 30,
+      multiple: false,
+    },
+    data: {
+      by: 'css',
+      locator: 'table',
+      timeout: 30,
+      multiple: true,
+    },
   },
   {
-    label: 'Extract table data as excel',
-    description: 'Extract structured data from an HTML table and download it as excel.',
-    action: 'extractTable' as Action,
+    action: 'extractTable',
+    label: 'Download table as Excel',
+    description: 'Extract structured data from an HTML table and save it as excel.',
   },
   {
+    action: 'screenshot',
     label: 'Take a screenshot',
     description: 'Capture a screenshot of the current page view.',
-    action: 'screenshot' as Action,
   },
+];
+
+export const EXAMPLE_FLOWS: SavedFlow[] = [
+  { name: 'NSE Derivatives', steps: NSE_DERIVATIVES_TABLE_FLOW, isPromoted: true },
 ];
 
 export const defaultSteps: labelledAction[] = [
   {
-    action: 'extractPDF',
-    label: 'Extract PDF',
-    description: 'Extract text, tables, images,etc from a PDF',
+    label: 'Naviagte to site',
+    description: 'Go to a specific URL to start scraping data from there.',
+    action: 'navigateTo',
     placeholder: {
-      usingUrl: true,
-      options: {
-        url: 'https://www.antennahouse.com/hubfs/xsl-fo-sample/pdf/basic-link-1.pdf',
-        fileUpload: null,
-        extract: 'text',
-      },
+      url: 'https://example.com',
+      waitUntil: 'load',
+      timeout: 30,
     },
     data: {
-      usingUrl: true,
-      options: {
-        url: 'https://www.antennahouse.com/hubfs/xsl-fo-sample/pdf/basic-link-1.pdf',
-        fileUpload: null,
-        extract: 'text',
-      },
+      url: 'https://www.google.com',
+      waitUntil: 'load',
+      waitForFullLoad: true,
+      timeout: 30,
     },
+  },
+  {
+    action: 'screenshot',
+    label: 'Take a screenshot',
+    description: 'Capture a screenshot of the current page view.',
   },
 ];

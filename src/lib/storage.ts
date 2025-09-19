@@ -3,6 +3,7 @@ import { labelledAction } from '@/constants/scraper/flow';
 export type SavedFlow = {
   name: string;
   steps: labelledAction[];
+  isPromoted?: boolean;
 };
 
 const STORAGE_KEY = 'automation_flows';

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 
 type Props = {
   buttonText?: string;
+  buttonIcon?: React.ReactNode;
   variant?: 'default' | 'link' | 'destructive' | 'outline' | 'secondary' | 'ghost' | null | undefined;
   outputFileName?: string;
   headers: string[];
@@ -13,7 +14,8 @@ type Props = {
 };
 
 export function DownloadExcel({
-  buttonText = 'Download Excel',
+  buttonText = 'Download as Excel',
+  buttonIcon = null,
   variant = 'default',
   outputFileName = 'scraped_data.xlsx',
   headers,
@@ -60,7 +62,8 @@ export function DownloadExcel({
   };
 
   return (
-    <Button onClick={handleDownload} variant={variant}>
+    <Button onClick={handleDownload} variant={variant} className='my-2'>
+      {buttonIcon && buttonIcon}
       {buttonText}
     </Button>
   );

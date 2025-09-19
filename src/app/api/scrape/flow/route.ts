@@ -173,17 +173,24 @@ const handleStep = async (
   }
 };
 
-export type flowResult = { step: labelledAction; result?: Awaited<ReturnType<typeof handleStep>>; error?: unknown };
+export type flowResult = {
+  step: labelledAction;
+  timeTaken: number;
+  result?: Awaited<ReturnType<typeof handleStep>>;
+  error?: unknown;
+};
 
 export async function POST(request: NextRequest) {
   const scraper = new Scraper();
   let stepCounter = 0;
   const results: flowResult[] = [];
   const automationFlows: flowReqBody = await request.json();
+  let startTime = null; // or new Date().getTime()
   try {
     await scraper.init();
 
     let lastResult: unknown = null;
+    startTime = Date.now();
 
     for (const step of automationFlows.steps) {
       stepCounter++;
@@ -210,14 +217,16 @@ export async function POST(request: NextRequest) {
         'postRequest',
         'executeJavaScript',
       ].includes(action);
-      console.log('shouldStoreResult', shouldStoreResult, result);
 
-      results.push({ step, ...(shouldStoreResult && { result }) });
+      const timeTaken = (Date.now() - startTime) / 1000;
+      startTime = Date.now();
+      results.push({ step, timeTaken, ...(shouldStoreResult && { result }) });
     }
     return NextResponse.json({ success: true, results });
   } catch (error) {
     results.push({
       step: automationFlows.steps[stepCounter - 1],
+      timeTaken: Date.now() - (startTime || 1) / 1000,
       error: error instanceof Error ? error.message : String(error),
     });
     return NextResponse.json({ success: false, results });
