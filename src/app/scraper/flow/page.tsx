@@ -337,7 +337,7 @@ export default function AutomationPage() {
 
                     <div className='flex-1 space-y-2 overflow-auto'>
                       <div className='flex items-center gap-2'>
-                        <span className='font-semibold text-lg'>{res.step.label.toUpperCase()}</span>
+                        <span className='font-semibold text-lg'>{res.step?.label.toUpperCase()}</span>
                         <span className='text-muted-foreground text-xs'>{res.timeTaken.toFixed(2)}s</span>
                         <Badge
                           variant='secondary'
@@ -350,15 +350,15 @@ export default function AutomationPage() {
                         </Badge>
                       </div>
 
-                      {!!res.step.data && (
+                      {!!res.step?.data && (
                         <div className='text-sm text-muted-foreground'>
-                          <strong>Value:</strong> <code>{JSON.stringify(res.step.data)}</code>
+                          <strong>Value:</strong> <code>{JSON.stringify(res.step?.data)}</code>
                         </div>
                       )}
 
                       {hasResult && (
                         <div className='rounded-md border p-4 overflow-auto'>
-                          {res.step.action === 'screenshot' && res.result?.type === 'Buffer' ? (
+                          {res.step?.action === 'screenshot' && res.result?.type === 'Buffer' ? (
                             <Image
                               src={bufferToImageUrl(res.result as bufferObj) || ''}
                               width={700}
