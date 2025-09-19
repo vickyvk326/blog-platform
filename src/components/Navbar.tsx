@@ -19,7 +19,7 @@ export function Navbar() {
 
   return (
     <header className='border-b bg-background'>
-      <nav className='container flex items-center justify-between h-14'>
+      <nav className='px-4 flex items-center justify-between h-14 mx-auto'>
         <Image src={'/globe.svg'} alt='logo' width={30} height={30} />
         <div className='flex items-center space-x-4'>
           {routes.map((route) => (
