@@ -8,6 +8,6 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     const user = await getUser(id);
     return NextResponse.json(user);
   } catch (error) {
-    return handleApiError(error);
+    return await handleApiError(error);
   }
 }

@@ -1,3 +1,4 @@
+import { getLogger } from '@/lib/logger';
 import { AppError, handleApiError, NotFoundError } from '@/lib/next/errors';
 import Scraper, { waitUntil } from '@/utilities/WebScraper';
 import { NextRequest, NextResponse } from 'next/server';
@@ -19,7 +20,8 @@ export type scrapeReqBody = Record<string, locatorType[]>;
 export type extractedDataType = Record<string, { label: string; data: (string | null)[] }[]>;
 
 export async function POST(req: NextRequest) {
-  const scraper = new Scraper();
+  const logger = await getLogger();
+  const scraper = new Scraper(logger);
   try {
     const body: scrapeReqBody = await req.json();
 
@@ -44,7 +46,7 @@ export async function POST(req: NextRequest) {
       for (const elementLocator of elementLocators) {
         const { findMany, attribute, label, timeout = 5000 } = elementLocator;
 
-        console.log(`Processing ${url} of locator`);
+        logger.info(`Processing ${url} of locator`);
 
         const elements: (Locator | null)[] = [];
 
@@ -93,7 +95,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, data: extractedData });
   } catch (error) {
-    return handleApiError(error);
+    return await handleApiError(error);
   } finally {
     await scraper.close();
   }

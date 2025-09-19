@@ -7,6 +7,6 @@ export async function GET() {
     const users = await withErrorHandling(getUsers);
     return NextResponse.json(users);
   } catch (error) {
-    handleApiError(error);
+    await handleApiError(error);
   }
 }

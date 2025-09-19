@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { ZodError } from 'zod';
 import { Prisma } from '@prisma/client';
+import { getLogger } from '../logger';
 
 // Custom AppError class for structured error handling
 export class AppError extends Error {
@@ -41,8 +42,10 @@ export class ForbiddenError extends AppError {
 }
 
 // Global error handler for API routes
-export function handleApiError(error: unknown): NextResponse {
-  console.error('API Error:', error);
+export async function handleApiError(error: unknown): Promise<NextResponse<unknown>> {
+  const logger = await getLogger();
+
+  logger.error('API Error:', error);
 
   // Handle our custom AppError
   if (error instanceof AppError) {
@@ -148,6 +151,6 @@ export async function withErrorHandling<T>(operation: () => Promise<T>): Promise
     const data = await operation();
     return { data };
   } catch (error) {
-    return { error: handleApiError(error) };
+    return { error: await handleApiError(error) };
   }
 }

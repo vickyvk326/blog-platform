@@ -70,7 +70,7 @@ class Scraper {
     } = {},
   ): Promise<void> {
     if (!this.page) {
-      console.log('Page not found. Initialising...');
+      this.logger.info('Page not found. Initialising...');
       await this.ensureBrowserInitiation();
       if (!this.page) throw new Error('Page not initialised.');
     }
@@ -134,7 +134,7 @@ class Scraper {
 
   async waitForElement(selector: string, timeout: number = 15000): Promise<Locator> {
     if (!this.page) {
-      console.log('Page not found. Initialising...');
+      this.logger.info('Page not found. Initialising...');
       await this.ensureBrowserInitiation();
       if (!this.page) throw new Error('Page not initialised.');
     }
@@ -145,7 +145,7 @@ class Scraper {
 
   async waitForXPath(xpath: string, timeout: number = 15000): Promise<Locator> {
     if (!this.page) {
-      console.log('Page not found. Initialising...');
+      this.logger.info('Page not found. Initialising...');
       await this.ensureBrowserInitiation();
       if (!this.page) throw new Error('Page not initialised.');
     }
@@ -156,7 +156,7 @@ class Scraper {
 
   async waitForNetworkIdle(timeout: number = 15000): Promise<void> {
     if (!this.page) {
-      console.log('Page not found. Initialising...');
+      this.logger.info('Page not found. Initialising...');
       await this.ensureBrowserInitiation();
       if (!this.page) throw new Error('Page not initialised.');
     }
@@ -188,7 +188,7 @@ class Scraper {
     } = {},
   ): Promise<void> {
     if (!this.page) {
-      console.log('Page not found. Initialising...');
+      this.logger.info('Page not found. Initialising...');
       await this.ensureBrowserInitiation();
       if (!this.page) throw new Error('Page not initialised.');
     }
@@ -269,7 +269,7 @@ class Scraper {
     } = {},
   ): Promise<Locator | null> {
     if (!this.page) {
-      console.log('Page not found. Initialising...');
+      this.logger.info('Page not found. Initialising...');
       await this.ensureBrowserInitiation();
       if (!this.page) throw new Error('Page not initialised.');
     }
@@ -302,7 +302,7 @@ class Scraper {
     } = {},
   ): Promise<Locator | null> {
     if (!this.page) {
-      console.log('Page not found. Initialising...');
+      this.logger.info('Page not found. Initialising...');
       await this.ensureBrowserInitiation();
       if (!this.page) throw new Error('Page not initialised.');
     }
@@ -327,7 +327,7 @@ class Scraper {
 
   async getElementsByCss(cssSelector: string, options?: { timeout?: number; from?: Locator }): Promise<Locator[]> {
     if (!this.page) {
-      console.log('Page not found. Initialising...');
+      this.logger.info('Page not found. Initialising...');
       await this.ensureBrowserInitiation();
       if (!this.page) throw new Error('Page not initialised.');
     }
@@ -348,7 +348,7 @@ class Scraper {
 
   async getElementsByXPath(xpath: string, options?: { timeout?: number; from?: Locator }): Promise<Locator[]> {
     if (!this.page) {
-      console.log('Page not found. Initialising...');
+      this.logger.info('Page not found. Initialising...');
       await this.ensureBrowserInitiation();
       if (!this.page) throw new Error('Page not initialised.');
     }
@@ -370,7 +370,7 @@ class Scraper {
 
   async getElementByJs(jsPath: string, options?: { timeout?: number }): Promise<Locator | null> {
     if (!this.page) {
-      console.log('Page not found. Initialising...');
+      this.logger.info('Page not found. Initialising...');
       await this.ensureBrowserInitiation();
       if (!this.page) throw new Error('Page not initialised.');
     }
@@ -381,7 +381,7 @@ class Scraper {
 
       return val;
     } catch (error) {
-      console.log(`Error on getting element by JS. ${error}`);
+      this.logger.info(`Error on getting element by JS. ${error}`);
       return null;
     }
   }
@@ -406,7 +406,7 @@ class Scraper {
     } = {},
   ): Promise<T> {
     if (!this.page) {
-      console.log('Page not found. Initialising...');
+      this.logger.info('Page not found. Initialising...');
       await this.ensureBrowserInitiation();
       if (!this.page) throw new Error('Page not initialised.');
     }
@@ -425,7 +425,7 @@ class Scraper {
           try {
             return await new Function('arg', script)(arg);
           } catch (error) {
-            console.error('Script execution error:', error);
+            this.logger.error('Script execution error:', error);
             throw error;
           }
         },
@@ -551,7 +551,7 @@ class Scraper {
     options: { timeout?: number; maxRetries?: number } = {},
   ): Promise<void> {
     if (!this.page) {
-      console.log('Page not found. Initialising...');
+      this.logger.info('Page not found. Initialising...');
       await this.ensureBrowserInitiation();
       if (!this.page) throw new Error('Page not initialised.');
     }
@@ -617,7 +617,7 @@ class Scraper {
   }
 
   async get(url: string, options: Omit<RequestOptions, 'data'> = {}): Promise<APIResponse> {
-    console.log(`Get request received with ${JSON.stringify(options)}`);
+    this.logger.info(`Get request received with ${JSON.stringify(options)}`);
 
     const { returnJson, ...rest } = options;
     const res = this.fetchWithRetry('GET', url, rest);

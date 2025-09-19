@@ -1,4 +1,5 @@
 import { Action, labelledAction } from '@/constants/scraper/flow';
+import { getLogger } from '@/lib/logger';
 import { downloadPDF, runPythonScript } from '@/lib/serverUtils';
 import Scraper, { RequestOptions, waitUntil } from '@/utilities/WebScraper';
 import { NextRequest, NextResponse } from 'next/server';
@@ -96,9 +97,6 @@ const handleStep = async (
           return await scraper.getElementAttribute(prevValue as Locator, value);
         }
         return await scraper.getElementAttribute(prevValue as Locator, value);
-      case 'waitForFullLoad':
-        await scraper.waitForFullLoad(value as number);
-        break;
       case 'screenshot':
         const screenshotData = await scraper.takeScreenshot();
         return screenshotData;
@@ -142,7 +140,7 @@ const handleStep = async (
         };
         return await scraper.post(postUrl, postOptions);
       case 'extractPDF':
-        const pythonScript = 'C:\\Users\\User\\Desktop\\react\\blog-platform\\src\\python\\scripts\\playground.py';
+        const pythonScript = '@/';
         const downloadsPath = 'C:\\Users\\User\\Desktop\\react\\blog-platform\\src\\python\\downloads';
 
         const { usingUrl, options: pdfOptions } = value;
@@ -180,11 +178,18 @@ export type flowResult = {
   error?: unknown;
 };
 
+
+
 export async function POST(request: NextRequest) {
-  const scraper = new Scraper();
+  const logger = await getLogger();
+  const scraper = new Scraper(logger);
+
   let stepCounter = 0;
+
   const results: flowResult[] = [];
+
   const automationFlows: flowReqBody = await request.json();
+
   let startTime = null; // or new Date().getTime()
   try {
     await scraper.init();
@@ -199,7 +204,7 @@ export async function POST(request: NextRequest) {
 
       const value = step.data;
 
-      console.log(`Processing step ${stepCounter}. ${step.label} with value: ${JSON.stringify(value)}`);
+      logger.info(`Processing step ${stepCounter}. ${step.label} with value: ${JSON.stringify(value)}`);
 
       const flow = { action, value };
 

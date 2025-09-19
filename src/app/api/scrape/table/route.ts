@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { locatorTypesType } from '../route';
 import Scraper from '@/utilities/WebScraper';
 import { Locator } from 'playwright';
+import { getLogger } from '@/lib/logger';
 
 export async function GET(request: NextRequest) {
   try {
@@ -42,12 +43,12 @@ export async function GET(request: NextRequest) {
       const tableData = await scraper.extractTableAsArray(table);
       return NextResponse.json(tableData);
     } catch (error) {
-      return handleApiError(error);
+      return await handleApiError(error);
     } finally {
       await scraper.close();
     }
   } catch (error) {
-    return handleApiError(error);
+    return await handleApiError(error);
   }
 }
 
@@ -63,20 +64,19 @@ export async function POST(request: NextRequest) {
 
     const { rows } = body;
 
-    const scraper = new Scraper();
+    const logger = await getLogger();
+    const scraper = new Scraper(logger);
 
     await scraper.init();
     try {
       const allTableData = [];
 
       for (const row of rows) {
-        console.log('Processing row', row);
+        logger.info('Processing row', row);
 
         const { url: tableSiteUrl, locator: tableLocator, type: tableLocatorType } = row;
 
         await scraper.navigate(tableSiteUrl, { waitUntil: 'domcontentloaded' });
-
-        // if (waitForFullLoad) await scraper.waitForFullLoad();
 
         let table: Locator | null = null;
 
@@ -100,11 +100,11 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json(allTableData);
     } catch (error) {
-      return handleApiError(error);
+      return await handleApiError(error);
     } finally {
       await scraper.close();
     }
   } catch (error) {
-    return handleApiError(error);
+    return await handleApiError(error);
   }
 }

@@ -78,4 +78,5 @@ export const ensureDirExists = async (filePath: string): Promise<void> => {
     return;
   }
   await fs.promises.mkdir(dir, { recursive: true });
+  await fs.promises.access(dir, fs.constants.W_OK);
 };
