@@ -1,7 +1,6 @@
-import fs from 'node:fs/promises';
-import path from 'node:path';
-import { format } from 'node:util';
 import ansiColors from 'ansi-colors';
+import fs from 'node:fs/promises';
+import { format } from 'node:util';
 import { ensureDirExists } from './HelperFunctions';
 
 type LogLevel = 'error' | 'warn' | 'info' | 'debug' | 'trace';
