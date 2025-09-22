@@ -10,9 +10,14 @@ export async function middleware(request: NextRequest) {
   const token = request.cookies.get('refreshToken')?.value;
 
   if (!token && isAuthRoute(request.nextUrl.pathname)) {
-    return NextResponse.redirect(new URL('/login', request.url));
+    return NextResponse.redirect(new URL('/login', request.url), {
+      status: 307,
+      headers: {
+        'Cache-Control': 'no-store, max-age=0',
+      },
+    });
   }
-  
+
   return NextResponse.next();
 }
 

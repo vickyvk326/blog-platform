@@ -49,6 +49,7 @@ export default function Page() {
     const { message, ...user } = responseData;
     setUser(user.user);
     toast.success(message);
+    router.refresh();
     router.push('/');
     setIsAccountNotVerifiedModal(false);
   };
