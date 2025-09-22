@@ -1,7 +1,18 @@
 import { NextResponse, NextRequest } from 'next/server';
 
+const AUTH_ROUTES = ['/scraper'];
+
+const isAuthRoute = (url: string) => AUTH_ROUTES.some((route) => url.startsWith(route));
+
 export async function middleware(request: NextRequest) {
-  console.log(`[Middleware] ${request.method} ${request.url}`);
+  console.log(`[Middleware] ${request.method} ${request.nextUrl.pathname}`);
+
+  const token = request.cookies.get('refreshToken')?.value;
+
+  if (!token && isAuthRoute(request.nextUrl.pathname)) {
+    return NextResponse.redirect(new URL('/login', request.url));
+  }
+  
   return NextResponse.next();
 }
 

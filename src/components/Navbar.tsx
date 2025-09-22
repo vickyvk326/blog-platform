@@ -1,11 +1,20 @@
 'use client';
 
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
+import { useAuth } from './ClientProvider';
 import { ThemeToggle } from './theme-toggle';
-import Image from 'next/image';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from './ui/dropdown-menu';
 
 const routes = [
   { href: '/', label: 'Home' },
@@ -14,8 +23,13 @@ const routes = [
   { href: '/scraper/table', label: 'Table Extractor' },
 ];
 
-export function Navbar() {
+export default function Navbar() {
+  const { user, setUser } = useAuth();
   const pathname = usePathname();
+  const handleLogout = async () => {
+    await fetch('/api/auth/logout', { method: 'POST' });
+    setUser(null);
+  };
 
   return (
     <header className='fixed inset-x-0 top-0 z-50'>
@@ -25,7 +39,7 @@ export function Navbar() {
           py-3
           flex items-center justify-between gap-4
           backdrop-blur-md bg-white/40 dark:bg-gray-900/40
-          border-b border-white/10 dark:border-gray-800/40
+          transition duration-300 ease-in-out
           shadow-sm
           backdrop-saturate-150
           '
@@ -43,6 +57,36 @@ export function Navbar() {
               </Button>
             </Link>
           ))}
+        </div>
+        <div className='flex items-center space-x-4'>
+          {user ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger>{user.name}</DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Button className='w-full' variant={'ghost'}>
+                    <Link href={'/profile'}>Profile</Link>
+                  </Button>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Button className='w-full' onClick={handleLogout} variant={'destructive'}>
+                    Logout
+                  </Button>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <Link href={'/login'}>
+              <Button
+                variant={pathname === '/login' ? 'default' : 'ghost'}
+                className={cn('text-sm font-medium', pathname === '/login' && 'bg-primary text-primary-foreground')}
+              >
+                Login
+              </Button>
+            </Link>
+          )}
         </div>
         <ThemeToggle />
       </nav>

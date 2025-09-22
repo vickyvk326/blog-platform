@@ -29,6 +29,12 @@ export class NotFoundError extends AppError {
   }
 }
 
+export class ConflictError extends AppError {
+  constructor(resource: string = 'Resource') {
+    super('CONFLICT', 409, `${resource} already exists`);
+  }
+}
+
 export class UnauthorizedError extends AppError {
   constructor(message: string = 'Unauthorized') {
     super('UNAUTHORIZED', 401, message);
@@ -42,7 +48,7 @@ export class ForbiddenError extends AppError {
 }
 
 // Global error handler for API routes
-export async function handleApiError(error: unknown): Promise<NextResponse<unknown>> {
+export async function handleApiError(error: unknown): Promise<NextResponse> {
   const logger = await getLogger();
 
   logger.error('API Error:', error);
@@ -141,7 +147,7 @@ export async function handleApiError(error: unknown): Promise<NextResponse<unkno
         timestamp: new Date().toISOString(),
       },
     },
-    { status: 500 },
+    { status: 400 },
   );
 }
 

@@ -182,3 +182,5 @@ Shows DB tables in http://localhost:5555
 | `@default(uuid())`        | `id String @id @default(uuid())` | Auto-generate UUID                                 |
 | `@default(cuid())`        | `id String @id @default(cuid())` | Generate globally unique ID                        |
 | `@relation("CustomName")` |                                  | Name relations explicitly (useful in many-to-many) |
+
+https://localhost:3000/verify?token=4fd24271-e7c0-4438-a552-6ff03d5fa558
