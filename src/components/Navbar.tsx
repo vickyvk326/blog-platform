@@ -20,6 +20,7 @@ const routes = [
   { href: '/', label: 'Home' },
   { href: '/scraper', label: 'Scraper' },
   { href: '/scraper/flow', label: 'Flow Runner' },
+  { href: '/scraper/flow/user-flow-results', label: 'Flow Results' },
   { href: '/scraper/table', label: 'Table Extractor' },
 ];
 
@@ -30,6 +31,8 @@ export default function Navbar() {
     await fetch('/api/auth/logout', { method: 'POST' });
     setUser(null);
   };
+  
+  console.log('user', user);
 
   return (
     <header className='fixed inset-x-0 top-0 z-50'>

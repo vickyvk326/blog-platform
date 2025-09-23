@@ -1,9 +1,23 @@
 import { Action, labelledAction } from '@/constants/scraper/flow';
 import { getLogger } from '@/lib/logger';
+import { NotFoundError } from '@/lib/next/errors';
+import prisma from '@/lib/prisma';
+import { CurrentUser } from '@/lib/serverFunctions';
 import { downloadPDF, runPythonScript } from '@/lib/serverUtils';
 import Scraper, { RequestOptions, waitUntil } from '@/utilities/WebScraper';
 import { NextRequest, NextResponse } from 'next/server';
 import { Locator } from 'playwright';
+
+const ACTIONS_TO_STORE = [
+  'extractText',
+  'extractTable',
+  'extractPDF',
+  'extractAttribute',
+  'screenshot',
+  'getRequest',
+  'postRequest',
+  'executeJavaScript',
+];
 
 export type flow =
   | { navigateTo: { url: string; waitUntil?: string } }
@@ -29,6 +43,7 @@ export type flow =
 
 export type flowReqBody = {
   steps: labelledAction[];
+  user: CurrentUser;
 };
 
 const handleStep = async (
@@ -178,8 +193,6 @@ export type flowResult = {
   error?: unknown;
 };
 
-
-
 export async function POST(request: NextRequest) {
   const logger = await getLogger();
   const scraper = new Scraper(logger);
@@ -188,16 +201,30 @@ export async function POST(request: NextRequest) {
 
   const results: flowResult[] = [];
 
-  const automationFlows: flowReqBody = await request.json();
+  const flowRequestBody: flowReqBody = await request.json();
 
-  let startTime = null; // or new Date().getTime()
+  const { steps, user } = flowRequestBody;
+
+  if (!user) throw new NotFoundError('User not found');
+
+  if (!prisma) throw new Error('Prisma not initialized');
+
+  const flow = await prisma.flow.create({
+    data: { steps: JSON.parse(JSON.stringify(steps)) }, // cast array to InputJsonValue
+  });
+
+  const flowResult = await prisma.userFlowResult.create({ data: { userId: user.id, flowId: flow?.id } });
+
+  let startTime = null;
+
   try {
     await scraper.init();
 
     let lastResult: unknown = null;
+
     startTime = Date.now();
 
-    for (const step of automationFlows.steps) {
+    for (const step of steps) {
       stepCounter++;
 
       const action = step.action;
@@ -212,30 +239,32 @@ export async function POST(request: NextRequest) {
 
       if (!!result) lastResult = result;
 
-      const shouldStoreResult = [
-        'extractText',
-        'extractTable',
-        'extractPDF',
-        'extractAttribute',
-        'screenshot',
-        'getRequest',
-        'postRequest',
-        'executeJavaScript',
-      ].includes(action);
+      const shouldStoreResult = ACTIONS_TO_STORE.includes(action);
 
       const timeTaken = (Date.now() - startTime) / 1000;
       startTime = Date.now();
       results.push({ step, timeTaken, ...(shouldStoreResult && { result }) });
     }
+
     return NextResponse.json({ success: true, results });
   } catch (error) {
     results.push({
-      step: automationFlows.steps[stepCounter - 1],
+      step: steps[stepCounter - 1],
       timeTaken: Date.now() - (startTime || 1) / 1000,
       error: error instanceof Error ? error.message : String(error),
     });
+
     return NextResponse.json({ success: false, results });
   } finally {
     await scraper.close();
+
+    const result = await prisma.result.create({
+      data: { result: JSON.parse(JSON.stringify(results)) },
+    });
+
+    await prisma.userFlowResult.update({
+      where: { id: flowResult?.id },
+      data: { resultId: result?.id },
+    });
   }
 }

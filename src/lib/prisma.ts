@@ -1,102 +1,75 @@
 // lib/prisma.ts
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient } from '@prisma/client'
 
-declare global {
-  // reuse client during hot-reloads in development to avoid multiple instances
-  // eslint-disable-next-line no-var
-  var prisma: PrismaClient | undefined;
-  // guard so we attach handlers only once
-  var __prismaHandlersAttached: boolean | undefined;
+const globalForPrisma = globalThis as unknown as {
+  prisma: PrismaClient | undefined
 }
 
-const isDev = process.env.NODE_ENV !== "production";
-
-/**
- * We purposefully DO NOT enable "query" in the PrismaClient `log` array
- * to avoid Prisma printing queries automatically **AND** printing them again
- * from our custom $on('query') handler (which causes duplicate logs).
- *
- * Instead we enable info/warn/error and attach a custom structured logger
- * for 'query' events only when needed (dev).
- */
-const logLevels = isDev ? ["info", "warn", "error"] : ["warn", "error"] as const;
-
 export const prisma =
-  global.prisma ??
+  globalForPrisma.prisma ??
   new PrismaClient({
-    log: logLevels,
-  });
+    log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+    errorFormat: 'pretty',
+  })
 
-// keep singleton in dev
-if (isDev) global.prisma = prisma;
+if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
 
-/**
- * Use an app-level logger if available (e.g. global.logger = pino())
- * otherwise fallback to console. This keeps the implementation flexible.
- */
-const logger = (global as any).logger ?? console;
-
-/** sanitize and truncate param string to avoid huge JS logs or leaking tokens */
-function sanitizeParams(rawParams: string) {
-  // params comes as a string (Prisma prints them as JSON array string)
-  if (!rawParams) return rawParams;
-  // try parse -> sanitize -> stringify so we redact/truncate long strings
+// Optional: Add connection helper
+export async function connectDB() {
   try {
-    const parsed = JSON.parse(rawParams);
-    const sanitized = JSON.parse(
-      JSON.stringify(parsed, (_key, value) => {
-        if (typeof value === "string") {
-          // heuristic: redact values that look like JWTs or very long strings
-          if (value.length > 300) return `${value.slice(0, 120)}...[TRUNCATED:${value.length}]`;
-          // redact common secrets patterns (bearer tokens) - basic heuristic
-          if (/^(eyJ|eyJhbGci)/.test(value)) return "[JWT_REDACTED]";
-        }
-        return value;
-      })
-    );
-    return JSON.stringify(sanitized);
-  } catch {
-    // fallback: truncate raw string
-    return rawParams.length > 1000 ? `${rawParams.slice(0, 1000)}...[TRUNCATED]` : rawParams;
+    await prisma.$connect()
+    console.log('✅ Database connected successfully')
+  } catch (error) {
+    console.error('❌ Database connection failed:', error)
+    process.exit(1)
   }
 }
 
-/**
- * Attach handlers only once to avoid duplicate logs across modules/hmr.
- */
-if (!global.__prismaHandlersAttached) {
-  // query events — structured logging
-  prisma.$on("query", (e) => {
-    const msg = {
-      event: "prisma.query",
-      query: e.query,
-      params: sanitizeParams(e.params),
-      durationMs: e.duration,
-    };
-    if (typeof logger.info === "function") logger.info(msg);
-    else logger.log?.(msg);
-  });
-
-  // info/warn/error events from prisma (these come from Prisma's `log` option)
-  prisma.$on("info", (e) => {
-    const msg = { event: "prisma.info", message: (e as any).message ?? e };
-    if (typeof logger.info === "function") logger.info(msg);
-    else logger.log?.(msg);
-  });
-
-  prisma.$on("warn", (e) => {
-    const msg = { event: "prisma.warn", message: (e as any).message ?? e };
-    if (typeof logger.warn === "function") logger.warn(msg);
-    else logger.log?.(msg);
-  });
-
-  prisma.$on("error", (e) => {
-    const msg = { event: "prisma.error", message: (e as any).message ?? e, stack: (e as any).stack };
-    if (typeof logger.error === "function") logger.error(msg);
-    else logger.log?.(msg);
-  });
-
-  global.__prismaHandlersAttached = true;
+// Optional: Add graceful shutdown
+export async function disconnectDB() {
+  try {
+    await prisma.$disconnect()
+    console.log('✅ Database disconnected successfully')
+  } catch (error) {
+    console.error('❌ Database disconnection failed:', error)
+  }
 }
 
-export default prisma;
+// Type helpers for better DX
+export type PrismaTransaction = Parameters<Parameters<typeof prisma.$transaction>[0]>[0]
+
+// Utility function for handling Prisma errors
+export function handlePrismaError(error: unknown) {
+  if (error instanceof Error) {
+    // Prisma-specific error handling
+    if (error.message.includes('Unique constraint failed')) {
+      return { error: 'Resource already exists', status: 409 }
+    }
+    if (error.message.includes('Record to update not found')) {
+      return { error: 'Resource not found', status: 404 }
+    }
+    if (error.message.includes('Foreign key constraint failed')) {
+      return { error: 'Invalid reference', status: 400 }
+    }
+    
+    return { error: 'Database error occurred', status: 500 }
+  }
+  
+  return { error: 'Unknown error occurred', status: 500 }
+}
+
+// Example middleware for API routes
+export function withPrismaErrorHandling<T extends any[], R>(
+  handler: (...args: T) => Promise<R>
+) {
+  return async (...args: T): Promise<R> => {
+    try {
+      return await handler(...args)
+    } catch (error) {
+      const { error: message, status } = handlePrismaError(error)
+      throw new Error(`${status}: ${message}`)
+    }
+  }
+}
+
+export default prisma

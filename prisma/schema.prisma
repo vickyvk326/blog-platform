@@ -8,18 +8,16 @@ datasource db {
 }
 
 model User {
-  id            String    @id @default(cuid())
+  id            String           @id @default(cuid())
   name          String
-  email         String    @unique
+  email         String           @unique
   password      String
   emailVerified DateTime?
   image         String?
-  posts         Post[]
-  comments      Comment[]
-  likes         Like[]
   accounts      Account[]
   sessions      Session[]
-  createdAt     DateTime  @default(now())
+  createdAt     DateTime         @default(now())
+  FlowResult    UserFlowResult[]
 }
 
 // For OAuth
@@ -58,35 +56,27 @@ model VerificationToken {
   @@unique([email, token])
 }
 
-model Post {
-  id        String    @id @default(cuid())
-  title     String
-  content   String    @db.Text
-  author    User      @relation(fields: [authorId], references: [id])
-  authorId  String
-  comments  Comment[]
-  likes     Like[]
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+model UserFlowResult {
+  id       Int     @id @default(autoincrement())
+  name     String?
+  userId   String
+  user     User    @relation(fields: [userId], references: [id])
+  flowId   Int
+  flow     Flow    @relation(fields: [flowId], references: [id])
+  resultId Int?
+  result   Result? @relation(fields: [resultId], references: [id])
 }
 
-model Comment {
-  id        String   @id @default(cuid())
-  content   String   @db.Text
-  post      Post     @relation(fields: [postId], references: [id])
-  postId    String
-  author    User     @relation(fields: [authorId], references: [id])
-  authorId  String
-  createdAt DateTime @default(now())
+model Flow {
+  id             Int              @id @default(autoincrement())
+  steps          Json // stores array of steps
+  userFlowResult UserFlowResult[]
+  createdAt      DateTime         @default(now())
 }
 
-model Like {
-  id        String   @id @default(cuid())
-  user      User     @relation(fields: [userId], references: [id])
-  userId    String
-  post      Post     @relation(fields: [postId], references: [id])
-  postId    String
-  createdAt DateTime @default(now())
-
-  @@unique([userId, postId])
+model Result {
+  id             Int              @id @default(autoincrement())
+  result         Json // stores array/object result
+  userFlowResult UserFlowResult[]
+  createdAt      DateTime         @default(now())
 }
