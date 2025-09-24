@@ -42,6 +42,7 @@ export type flow =
   | { postRequest: { url: string; options: RequestOptions } };
 
 export type flowReqBody = {
+  name?: string;
   steps: labelledAction[];
   user: CurrentUser;
 };
@@ -203,7 +204,14 @@ export async function POST(request: NextRequest) {
 
   const flowRequestBody: flowReqBody = await request.json();
 
-  const { steps, user } = flowRequestBody;
+  const now = new Date();
+  const {
+    name = `Flow ${now.getDate()}/${
+      now.getMonth() + 1
+    }/${now.getFullYear()} ${now.getHours()}:${now.getMinutes()}:${now.getSeconds()}`,
+    steps,
+    user,
+  } = flowRequestBody;
 
   if (!user) throw new NotFoundError('User not found');
 
@@ -213,7 +221,13 @@ export async function POST(request: NextRequest) {
     data: { steps: JSON.parse(JSON.stringify(steps)) }, // cast array to InputJsonValue
   });
 
-  const flowResult = await prisma.userFlowResult.create({ data: { userId: user.id, flowId: flow?.id } });
+  const flowResult = await prisma.userFlowResult.create({
+    data: {
+      name,
+      userId: user.id,
+      flowId: flow?.id,
+    },
+  });
 
   let startTime = null;
 
