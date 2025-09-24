@@ -1,3 +1,56 @@
 const max = Array.from(document.querySelectorAll('*'))
   .reduce((max, el) => el.childElementCount > max.childElementCount ? el : max);
 console.log(max, max.childElementCount);
+
+--------------------------
+
+
+const max = Array.from(document.querySelectorAll('*'))
+  .reduce((max, el) => el.childElementCount > max.childElementCount ? el : max);
+
+// Direct children of max (→ rows)
+const children = Array.from(max.children);
+
+// Find the maximum number of grandchildren
+const maxGrandChildrenCount = Math.max(
+  ...children.map(child => child.childElementCount)
+);
+
+// Create table
+const table = document.createElement('table');
+table.border = "1";
+table.style.borderCollapse = "collapse";
+
+// Create header row
+const header = document.createElement('tr');
+header.innerHTML = `<th>Child Tag</th>`;
+for (let i = 0; i < maxGrandChildrenCount; i++) {
+  const th = document.createElement('th');
+  th.textContent = `Grandchild ${i + 1}`;
+  header.appendChild(th);
+}
+table.appendChild(header);
+
+// Create rows for each child
+children.forEach(child => {
+  const row = document.createElement('tr');
+
+  // First cell: child tag name
+  const childTag = document.createElement('td');
+  childTag.textContent = child.tagName;
+  row.appendChild(childTag);
+
+  // Cells: each grandchild
+  const grandChildren = Array.from(child.children);
+  for (let i = 0; i < maxGrandChildrenCount; i++) {
+    const td = document.createElement('td');
+    const gc = grandChildren[i];
+    td.textContent = gc ? `${gc.tagName}: ${gc.textContent.trim() || '(empty)'}` : '';
+    row.appendChild(td);
+  }
+
+  table.appendChild(row);
+});
+
+// Append table to page
+document.body.appendChild(table);
