@@ -1,11 +1,4 @@
-const max = Array.from(document.querySelectorAll('*'))
-  .reduce((max, el) => el.childElementCount > max.childElementCount ? el : max);
-console.log(max, max.childElementCount);
-
---------------------------
-
-
-const max = Array.from(document.querySelectorAll('*'))
+const max = Array.from(document.querySelectorAll('body *'))
   .reduce((max, el) => el.childElementCount > max.childElementCount ? el : max);
 
 // Direct children of max (→ rows)

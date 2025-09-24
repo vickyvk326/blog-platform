@@ -10,9 +10,9 @@ export default function ActionInput({ action, value, placeholder, updateStep, id
       <div className='space-y-2'>
         <div className='flex items-center gap-2'>
           <span className='w-12'>URL</span>
-          <Input
+          <Textarea
             placeholder={placeholder.url || 'https://example.com'}
-            className='flex-1'
+            className='flex-1 max-h-30'
             value={value?.url || ''}
             onChange={(e) =>
               updateStep(idx, 'navigateTo', {

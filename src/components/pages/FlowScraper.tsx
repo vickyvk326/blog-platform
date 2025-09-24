@@ -339,7 +339,7 @@ function FlowScraper({ user, initialData }) {
 
                     <div className='flex-1 space-y-2 overflow-auto'>
                       <div className='flex items-center gap-2'>
-                        <span className='font-semibold text-lg'>{res.step?.label.toUpperCase()}</span>
+                        <span className='font-semibold text-lg'>{res.step?.label?.toUpperCase()}</span>
                         <span className='text-muted-foreground text-xs'>{res.timeTaken.toFixed(2)}s</span>
                         <Badge
                           variant='secondary'
@@ -360,14 +360,17 @@ function FlowScraper({ user, initialData }) {
 
                       {hasResult && (
                         <div className='rounded-md border p-4 overflow-auto'>
-                          {res.step?.action === 'screenshot' && res.result?.type === 'Buffer' ? (
-                            <Image
-                              src={bufferToImageUrl(res.result as bufferObj) || ''}
-                              width={700}
-                              height={300}
-                              alt={`screenshot step ${idx + 1}`}
-                              className='rounded-lg border shadow-md max-w-full mx-auto'
-                            />
+                          {res.step?.action === 'screenshot' && res.result?.[0]?.type === 'Buffer' ? (
+                            res.result?.map((screenshot, idx) => (
+                              <Image
+                                key={idx}
+                                src={bufferToImageUrl(screenshot as bufferObj) || ''}
+                                width={700}
+                                height={300}
+                                alt={`screenshot step ${idx + 1}`}
+                                className='rounded-lg border shadow-md max-w-full mx-auto'
+                              />
+                            ))
                           ) : Array.isArray(res.result) && res.result.length ? (
                             Array.isArray(res.result[0]) ? (
                               res.result.map((table, tableIndex) => (

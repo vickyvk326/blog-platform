@@ -47,6 +47,7 @@ export interface labelledAction {
   action: Action;
   data?: unknown;
   placeholder?: unknown;
+  isMultipleUrls?: boolean;
 }
 
 export const ACTIONS_LABELS: Record<

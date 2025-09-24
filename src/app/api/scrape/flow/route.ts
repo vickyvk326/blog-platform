@@ -39,7 +39,8 @@ export type flow =
   | { scrollToBottom: null }
   | { scrollIntoElement: null }
   | { getRequest: { url: string; options: Omit<RequestOptions, 'data'> } }
-  | { postRequest: { url: string; options: RequestOptions } };
+  | { postRequest: { url: string; options: RequestOptions } }
+  | { multipleUrlsStartsHere: null };
 
 export type flowReqBody = {
   name?: string;
@@ -187,10 +188,12 @@ const handleStep = async (
   }
 };
 
+const splitUrls = (urls?: string) => (urls ? urls.split(/,\s*/).filter(Boolean) : []);
+
 export type flowResult = {
   step: labelledAction;
   timeTaken: number;
-  result?: Awaited<ReturnType<typeof handleStep>>;
+  result?: Awaited<ReturnType<typeof handleStep>>[];
   error?: unknown;
 };
 
@@ -231,6 +234,7 @@ export async function POST(request: NextRequest) {
 
   let startTime = null;
 
+  const loopedSteps: typeof steps = [];
   try {
     await scraper.init();
 
@@ -238,14 +242,38 @@ export async function POST(request: NextRequest) {
 
     startTime = Date.now();
 
-    for (const step of steps) {
+    const multipleUrlsResults: Record<string, any> = {};
+
+    for (let i = 0; i < steps.length; i++) {
+      const step = steps[i];
+
+      if (step.action === 'navigateTo') {
+        const splittedUrls = splitUrls(step?.data?.url || []);
+
+        if (splittedUrls.length > 1) {
+          const remainingSteps = steps.slice(i + 1);
+
+          splittedUrls.forEach((url) => {
+            loopedSteps.push({ ...step, data: { ...(step.data || {}), url }, isMultipleUrls: true });
+            loopedSteps.push(...(remainingSteps.map((x) => ({ ...x, isMultipleUrls: true })) as typeof steps));
+          });
+
+          break;
+        }
+      }
+
+      // It's not navigateTo with multiple URLs
+      loopedSteps.push(step);
+    }
+
+    for (const step of loopedSteps) {
       stepCounter++;
 
       const action = step.action;
 
       const value = step.data;
 
-      logger.info(`Processing step ${stepCounter}. ${step.label} with value: ${JSON.stringify(value)}`);
+      logger.info(`Processing step ${stepCounter}/${loopedSteps.length} - ${step.label}`);
 
       const flow = { action, value };
 
@@ -256,14 +284,44 @@ export async function POST(request: NextRequest) {
       const shouldStoreResult = ACTIONS_TO_STORE.includes(action);
 
       const timeTaken = (Date.now() - startTime) / 1000;
+
       startTime = Date.now();
-      results.push({ step, timeTaken, ...(shouldStoreResult && { result }) });
+
+      if (step.isMultipleUrls) {
+        if (action in multipleUrlsResults) {
+          multipleUrlsResults[action] = {
+            ...multipleUrlsResults[action],
+            timeTaken: multipleUrlsResults[action].timeTaken + timeTaken,
+            result: [
+              ...multipleUrlsResults[action].result,
+              ...(shouldStoreResult ? (Array.isArray(result) ? result : [result]) : []),
+            ],
+          };
+        } else {
+          multipleUrlsResults[action] = {
+            step,
+            timeTaken,
+            result: shouldStoreResult ? (Array.isArray(result) ? result : [result]) : [],
+          };
+        }
+        continue;
+      }
+
+      results.push({
+        step,
+        timeTaken,
+        ...(shouldStoreResult && { result: Array.isArray(result) ? result : [result] }),
+      });
     }
+
+    Object.entries(multipleUrlsResults).forEach(([action, output]) => {
+      results.push({ step: output.step, result: output.result, timeTaken: output.timeTaken });
+    });
 
     return NextResponse.json({ success: true, results });
   } catch (error) {
     results.push({
-      step: steps[stepCounter - 1],
+      step: loopedSteps[stepCounter - 1],
       timeTaken: Date.now() - (startTime || 1) / 1000,
       error: error instanceof Error ? error.message : String(error),
     });
