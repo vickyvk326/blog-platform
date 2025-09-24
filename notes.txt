@@ -1,0 +1,3 @@
+const max = Array.from(document.querySelectorAll('*'))
+  .reduce((max, el) => el.childElementCount > max.childElementCount ? el : max);
+console.log(max, max.childElementCount);
