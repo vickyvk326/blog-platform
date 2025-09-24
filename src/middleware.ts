@@ -1,6 +1,6 @@
 import { NextResponse, NextRequest } from 'next/server';
 
-const AUTH_ROUTES = ['/scraper'];
+const AUTH_ROUTES:string[] = [];
 
 const isAuthRoute = (url: string) => AUTH_ROUTES.some((route) => url.startsWith(route));
 
