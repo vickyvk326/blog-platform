@@ -288,6 +288,7 @@ function FlowScraper({ user, initialData }) {
                   idx={idx}
                   updateStep={updateStep}
                 />
+                
                 {/* Description */}
                 <p className='text-sm text-muted-foreground'>{step.description}</p>
               </div>
@@ -379,12 +380,12 @@ function FlowScraper({ user, initialData }) {
                                   <ExtractedTable data={table || []} />
                                   {Array.isArray(res.result) && res.result?.length > tableIndex + 1 && (
                                     <Separator className='mt-5' />
-                                  )}``
+                                  )}
                                 </div>
                               ))
                             ) : (
                               <ExtractedTable
-                                data={res.result.map((row) => ({ Title: typeof row === 'string' ? row : String(row) }))}
+                                data={res.result || []}
                               />
                             )
                           ) : typeof res.result === 'object' ? (

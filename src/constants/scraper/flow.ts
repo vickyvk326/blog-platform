@@ -6,6 +6,7 @@ export const ACTIONS = [
   'clickElement',
   'extractText',
   'extractTable',
+  'extractMaxChildren',
   'extractAttribute',
   'screenshot',
   'executeJavaScript',
@@ -29,6 +30,7 @@ export const ACTION_RULES: Record<Action, Action[]> = {
   inputText: ['findElement'],
   extractText: ['findElement', 'extractText', 'extractAttribute', 'extractTable'],
   extractTable: ['findElement', 'extractText', 'extractAttribute', 'extractTable'],
+  extractMaxChildren: [],
   extractAttribute: ['findElement', 'extractText', 'extractAttribute', 'extractTable'],
   screenshot: [],
   executeJavaScript: [],
@@ -57,14 +59,14 @@ export const ACTIONS_LABELS: Record<
   navigateTo: {
     label: 'Navigate to site',
     description: 'Go to a specific URL to start scraping data from there.',
-    placeholder: { url: 'https://example.com', waitUntil: 'load', waitForFullLoad: true, timeout: 30 },
-    data: { url: 'https://example.com', waitUntil: 'load', waitForFullLoad: true, timeout: 30 },
+    placeholder: { url: 'https://example.com', waitUntil: 'load', waitForFullLoad: true, timeout: 10 },
+    data: { url: 'https://example.com', waitUntil: 'load', waitForFullLoad: true, timeout: 10 },
   },
   findElement: {
     label: 'Find element',
     description: 'Find element using XPath, CSS selector, or ID.',
-    placeholder: { by: 'xpath', locator: '//*[@id="main"]', timeout: 30, multiple: false },
-    data: { by: 'xpath', locator: '//*[@id="main"]', timeout: 30, multiple: false },
+    placeholder: { by: 'css', locator: 'table', timeout: 30, multiple: false },
+    data: { by: 'css', locator: 'table', timeout: 30, multiple: false },
   },
   clickElement: {
     label: 'Click an element',
@@ -77,6 +79,10 @@ export const ACTIONS_LABELS: Record<
   extractTable: {
     label: 'Download table as Excel',
     description: 'Extract structured data from an HTML table and save it as excel.',
+  },
+  extractMaxChildren: {
+    label: 'Find largest group',
+    description: 'Find the element that has the largest number of children',
   },
   extractAttribute: {
     label: 'Extract attribute from one or more elements',

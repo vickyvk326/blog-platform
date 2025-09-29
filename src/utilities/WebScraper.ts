@@ -396,13 +396,28 @@ class Scraper {
     return (await element?.getAttribute(attribute))?.trim() || null;
   }
 
-  async executeScript<T = null>(
-    script: string | ((arg: unknown) => T),
+  private async withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error(`Timeout after ${ms}ms`)), ms);
+      promise.then(
+        (value) => {
+          clearTimeout(timer);
+          resolve(value);
+        },
+        (err) => {
+          clearTimeout(timer);
+          reject(err);
+        },
+      );
+    });
+  }
+
+  async executeScript<T>(
+    script: string | ((arg: unknown) => T | Promise<T>),
     arg?: unknown,
     options: {
       timeout?: number;
       returnByValue?: boolean;
-      awaitPromise?: boolean;
     } = {},
   ): Promise<T> {
     if (!this.page) {
@@ -411,38 +426,46 @@ class Scraper {
       if (!this.page) throw new Error('Page not initialised.');
     }
 
-    const { timeout = 30000, returnByValue = true, } = options;
+    const { timeout = 30000, returnByValue = true } = options;
 
     try {
-      // Handle both string and function input
-      const scriptToExecute =
-        typeof script === 'function' ? `(${script.toString()})(${JSON.stringify(arg || '')})` : script;
+      const pageFn = typeof script === 'function' ? script : (new Function('arg', script) as (arg: unknown) => unknown);
 
-      this.logger.debug(`scriptToExecute ---> ${scriptToExecute}`);
+      const result = await this.withTimeout(this.page.evaluateHandle(pageFn, arg), timeout);
 
-      const result = await this.page.evaluateHandle(
-        async ({ script, arg }) => {
-          try {
-            return await new Function('arg', script)(arg);
-          } catch (error) {
-            this.logger.error('Script execution error:', error);
-            throw error;
-          }
-        },
-        { script: scriptToExecute, arg, timeout },
-      );
-
-      // Return primitive values directly
       if (returnByValue) {
         const value = await result.jsonValue();
         await result.dispose();
         return value as T;
       }
 
-      return result as T;
+      return result as unknown as T;
     } catch (error) {
+      this.logger.error('Script execution failed', error);
       throw new Error(`Script execution failed: ${error instanceof Error ? error.message : String(error)}`);
     }
+  }
+
+  async extractMaxChildren() {
+    return await this.executeScript(() => {
+      const max = Array.from(document.querySelectorAll('body *')).reduce((max, el) =>
+        el.childElementCount > max.childElementCount && !['SELECT', 'SCRIPT'].includes(el.tagName) ? el : max,
+      );
+
+      const children = Array.from(max.children);
+      const maxGrandChildrenCount = Math.max(...children.map((child) => child.childElementCount));
+
+      return children.map((child) => {
+        const grandChildren = Array.from(child.children);
+        const row: Record<string, string> = {};
+
+        for (let i = 0; i < maxGrandChildrenCount; i++) {
+          const gc = grandChildren[i];
+          row[`Column ${i + 1}`] = gc ? gc.textContent.trim() || '(empty)' : '';
+        }
+        return row;
+      });
+    });
   }
 
   async extractTableAsJson(

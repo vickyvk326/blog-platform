@@ -8,9 +8,9 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
     const pageNo = searchParams.get('page') || '0';
-    const pageSize = searchParams.get('pageSize') || '10';
+    const pageSize = searchParams.get('pageSize') || '20';
 
-    if (!userId) throw new NotFoundError('User ID not provided');
+    if (!userId) throw new NotFoundError('User Id not provided');
 
     const results = await prisma.userFlowResult.findMany({
       where: { userId },

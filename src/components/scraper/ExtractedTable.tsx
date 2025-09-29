@@ -9,6 +9,9 @@ type TableResult = {
 function ExtractedTable({ data }: { data: TableResult[] }) {
   if (!data || data.length === 0) return <p className='text-muted-foreground text-sm font-medium'>No table data</p>;
 
+  if (!data[0] || Object.keys(data[0]).length === 0)
+    return <p className='text-muted-foreground text-sm font-medium'>No table data</p>;
+
   // Extract column headers from first row
   const headers = Object.keys(data[0]);
 
@@ -36,7 +39,9 @@ function ExtractedTable({ data }: { data: TableResult[] }) {
             {data.slice(0, 25).map((row, i) => (
               <TableRow key={i}>
                 {headers.map((h) => (
-                  <TableCell key={h}>{row[h] || '-'}</TableCell>
+                  <TableCell key={h} className='font-medium max-w-10 overflow-hidden'>
+                    {row[h] || '-'}
+                  </TableCell>
                 ))}
               </TableRow>
             ))}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -17,16 +17,21 @@ type UserFlowResult = {
 export default function UserFlowResultsPage({ userId, initialData }) {
   const [results, setResults] = useState<UserFlowResult[]>(initialData || []);
   const [page, setPage] = useState(0);
-  const [pageSize] = useState(10);
+  const [pageSize] = useState(20);
   const [loading, setLoading] = useState(false);
+  const isFirstRender = useRef(true);
 
   useEffect(() => {
     const fetchResults = async () => {
       // Don't fetch if it's the first render (page=0, we already have initialData)
-      if (page === 0) return;
+      if (isFirstRender.current) {
+        isFirstRender.current = false;
+        return;
+      }
+      
       setLoading(true);
       try {
-        const res = await fetch(`/api/userFlowResults?userId=${userId}&page=${page}&pageSize=${pageSize}`);
+        const res = await fetch(`/api/scrape/flow/userFlowResults?userId=${userId}&page=${page}`);
         const data = await res.json();
         setResults(data.results || []);
       } catch (err) {

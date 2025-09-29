@@ -3,7 +3,15 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-export default function ActionInput({ action, value, placeholder, updateStep, idx }: any) {
+import { Action } from '@/constants/scraper/flow';
+interface ActionInputProps {
+  action: Action;
+  value: any;
+  placeholder: any;
+  updateStep: (idx: number, action: Action, value: any) => void;
+  idx: number;
+}
+export default function ActionInput({ action, value, placeholder, updateStep, idx }: ActionInputProps) {
   // Navigate to
   if (action === 'navigateTo') {
     return (
@@ -285,12 +293,13 @@ export default function ActionInput({ action, value, placeholder, updateStep, id
       </div>
     );
   }
+
   if (action === 'extractPDF') {
     return (
       <>
         <div className='flex items-center space-x-2'>
           <Switch
-            id={idx}
+            id={String(idx)}
             checked={value?.usingUrl ?? false}
             className='data-[state=checked]:bg-primary'
             aria-label='Wait for complete page load'
@@ -302,7 +311,7 @@ export default function ActionInput({ action, value, placeholder, updateStep, id
               })
             }
           />
-          <Label htmlFor={idx}>Using link</Label>
+          <Label htmlFor={String(idx)}>Using link</Label>
         </div>
         {!!value?.usingUrl ? (
           <Input
@@ -342,5 +351,6 @@ export default function ActionInput({ action, value, placeholder, updateStep, id
       </>
     );
   }
+
   return null;
 }

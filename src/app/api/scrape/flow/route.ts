@@ -11,6 +11,7 @@ import { Locator } from 'playwright';
 const ACTIONS_TO_STORE = [
   'extractText',
   'extractTable',
+  'extractMaxChildren',
   'extractPDF',
   'extractAttribute',
   'screenshot',
@@ -107,6 +108,8 @@ const handleStep = async (
         } else if (prevValue) {
           return [await scraper.extractTableAsJson(prevValue as Locator)];
         }
+      case 'extractMaxChildren':
+        return await scraper.extractMaxChildren();
       case 'extractAttribute':
         if (prevValue instanceof Array) {
           return await Promise.all(prevValue.map((el: Locator) => scraper.getElementAttribute(el, value)));
