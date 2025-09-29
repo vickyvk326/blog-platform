@@ -379,7 +379,7 @@ function FlowScraper({ user, initialData }) {
                                   <ExtractedTable data={table || []} />
                                   {Array.isArray(res.result) && res.result?.length > tableIndex + 1 && (
                                     <Separator className='mt-5' />
-                                  )}
+                                  )}``
                                 </div>
                               ))
                             ) : (
